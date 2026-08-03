@@ -164,6 +164,23 @@ try {
     assert.equal(sanitised.inlineStyles, 0);
   });
 
+  const headings = await probe(`({
+    contentH1: shadow.querySelectorAll('.content h1').length,
+    firstContentHeading: shadow.querySelector('.content h1, .content h2')?.textContent?.trim() ?? null,
+    headerTitle: shadow.querySelector('.article__title').textContent.trim(),
+  })`);
+  check('正文里重复的标题被去掉，不会出现两次', () => {
+    assert.equal(headings.contentH1, 0, '正文不应保留与标题相同的 h1');
+    assert.notEqual(
+      headings.firstContentHeading,
+      headings.headerTitle,
+      '正文首个标题不应与页头标题重复',
+    );
+  });
+  check('正文中真正的小节标题被保留', () =>
+    assert.equal(headings.firstContentHeading, '一个小节标题'),
+  );
+
   const isolation = await probe(`(() => {
     const wrap = shadow.querySelector('.wrap');
     const heading = shadow.querySelector('.article__title');

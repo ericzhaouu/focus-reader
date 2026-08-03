@@ -89,6 +89,32 @@ function materialiseLazyImages(doc: Document): void {
   }
 }
 
+/** Loose comparison so punctuation and spacing differences don't defeat the match. */
+function normaliseForCompare(value: string): string {
+  return value
+    .replace(/\s+/g, '')
+    .replace(/[.,:;!?—–\-_|·、，。：；！？「」『』"'()（）[\]【】]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Readability keeps the article's own <h1> inside the extracted content, so the
+ * reader view would show the title twice — once in its header and again at the top
+ * of the body. Drops that heading when it repeats the title.
+ *
+ * Matching the first heading anywhere in the content (rather than only the leading
+ * children) is deliberate: Readability nests its output in wrapper divs whose depth
+ * varies by page. A genuine section heading identical to the article title is
+ * vanishingly rare, so this is safe.
+ */
+function stripDuplicateHeading(root: DocumentFragment, title: string): void {
+  const target = normaliseForCompare(title);
+  if (!target) return;
+  const heading = root.querySelector('h1, h2');
+  if (!heading) return;
+  if (normaliseForCompare(heading.textContent ?? '') === target) heading.remove();
+}
+
 export function extractArticle(doc: Document): Extracted | null {
   let parsed: ReturnType<Readability['parse']>;
   try {
@@ -105,16 +131,24 @@ export function extractArticle(doc: Document): Extracted | null {
   const wordCount = wordCountOf(text);
   if (wordCount < MIN_WORD_COUNT) return null;
 
-  const contentHtml = DOMPurify.sanitize(parsed.content, {
+  const clean = DOMPurify.sanitize(parsed.content, {
     FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed'],
     FORBID_ATTR: ['style', 'srcset', 'sizes'],
   });
 
+  const title = cleanTitle(parsed.title || doc.title || '', parsed.siteName || null, doc);
+
+  // A <template> parses inertly, so images and media are not fetched just to run
+  // this cleanup. The markup is already sanitised, so nothing can be reintroduced.
+  const template = doc.createElement('template');
+  template.innerHTML = clean;
+  stripDuplicateHeading(template.content, title);
+
   return {
-    title: cleanTitle(parsed.title || doc.title || '', parsed.siteName || null, doc),
+    title,
     byline: parsed.byline || null,
     siteName: parsed.siteName || null,
-    contentHtml,
+    contentHtml: template.innerHTML,
     wordCount,
     minutes: minutesFromText(text),
   };
