@@ -17,12 +17,16 @@ function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
-function run(label, command, args) {
-  // `shell: true` would concatenate rather than escape the arguments, which Node
-  // now warns about; resolving npm's Windows shim keeps the call shell-free.
-  const executable =
-    command === 'npm' && process.platform === 'win32' ? 'npm.cmd' : command;
-  const result = spawnSync(executable, args, { cwd: ROOT, stdio: 'inherit' });
+/**
+ * Runs a fixed command line through the shell.
+ *
+ * Passed as one string rather than command + args because Node warns about the
+ * latter under `shell: true` (it concatenates instead of escaping), while Windows
+ * refuses to spawn npm's .cmd shim without a shell at all. Every command here is a
+ * hard-coded literal, so there is nothing to inject.
+ */
+function run(label, commandLine) {
+  const result = spawnSync(commandLine, { cwd: ROOT, stdio: 'inherit', shell: true });
   if (result.error) {
     console.error(`  ${label}失败：${result.error.message}`);
     process.exit(1);
@@ -75,12 +79,12 @@ if (before === after) {
 // Dependencies may have changed with the new code; npm ci would be stricter but
 // also far slower for what is usually a no-op.
 console.log('  检查依赖…');
-run('依赖安装', 'npm', ['install', '--no-audit', '--no-fund']);
+run('依赖安装', 'npm install --no-audit --no-fund');
 
 // Must go through install:local rather than install-local.mjs directly: the script
 // only copies dist/, so calling it alone would deploy a stale build.
 console.log('  构建并部署…');
-run('构建部署', 'npm', ['run', 'install:local']);
+run('构建部署', 'npm run install:local');
 
 console.log(`  还差最后一步——Chrome 不会自己重新读取扩展文件：
 
