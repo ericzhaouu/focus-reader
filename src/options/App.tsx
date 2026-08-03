@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { countCandidates, getFolderPath, getFolderTree } from '../lib/bookmarks';
 import { hasHostAccess, onHostAccessChanged, removeHostAccess, requestHostAccess } from '../lib/permissions';
-import { SELECTORS } from '../lib/selection';
+import { AVAILABLE_STRATEGIES, SELECTORS, effectiveStrategy } from '../lib/selection';
 import { getConfig, getFocusPrefs, patchConfig, patchFocusPrefs } from '../lib/storage';
 import {
   MAX_BATCH_SIZE,
   MIN_BATCH_SIZE,
-  SELECTION_STRATEGIES,
   type Config,
   type FocusPrefs,
   type FocusTheme,
@@ -176,22 +175,20 @@ export default function App() {
           <select
             id="strategy"
             className="select"
-            value={config.strategy}
+            value={effectiveStrategy(config.strategy)}
             onChange={(event) =>
               void updateConfig({ strategy: event.target.value as Config['strategy'] })
             }
           >
-            {SELECTION_STRATEGIES.map((strategy) => {
-              const selector = SELECTORS[strategy];
-              return (
-                <option key={strategy} value={strategy} disabled={!selector.available}>
-                  {selector.label}
-                  {selector.available ? '' : '（即将推出）'}
-                </option>
-              );
-            })}
+            {AVAILABLE_STRATEGIES.map((strategy) => (
+              <option key={strategy} value={strategy}>
+                {SELECTORS[strategy].label}
+              </option>
+            ))}
           </select>
-          <div className="field__hint">{SELECTORS[config.strategy].description}</div>
+          <div className="field__hint">
+            {SELECTORS[effectiveStrategy(config.strategy)].description}
+          </div>
         </div>
 
         <div className="field">

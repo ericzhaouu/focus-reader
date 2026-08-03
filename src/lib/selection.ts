@@ -1,5 +1,5 @@
 import { rootDomainOf } from './url';
-import type { Candidate, SelectionStrategy } from './types';
+import { SELECTION_STRATEGIES, type Candidate, type SelectionStrategy } from './types';
 
 export interface SelectionInput {
   candidates: Candidate[];
@@ -148,6 +148,19 @@ export const SELECTORS: Record<SelectionStrategy, Selector> = {
 
 export function getSelector(strategy: SelectionStrategy): Selector {
   return SELECTORS[strategy] ?? RandomSelector;
+}
+
+/**
+ * Strategies offered in the UI. Unavailable ones keep their contract here so v2 can
+ * switch them on, but they are not advertised to users in the meantime.
+ */
+export const AVAILABLE_STRATEGIES: readonly SelectionStrategy[] = SELECTION_STRATEGIES.filter(
+  (strategy) => SELECTORS[strategy].available,
+);
+
+/** Resolves a stored strategy to one that can actually run. */
+export function effectiveStrategy(strategy: SelectionStrategy): SelectionStrategy {
+  return getSelector(strategy).available ? strategy : RandomSelector.id;
 }
 
 /** Picks a batch, transparently falling back to random for unavailable strategies. */

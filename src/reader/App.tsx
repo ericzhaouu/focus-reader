@@ -4,7 +4,7 @@ import { getFolderPath } from '../lib/bookmarks';
 import { onBatchUpdated, sendMessage } from '../lib/messaging';
 import { hasHostAccess, onHostAccessChanged } from '../lib/permissions';
 import { getStats } from '../lib/storage';
-import { getSelector } from '../lib/selection';
+import { getSelector, effectiveStrategy } from '../lib/selection';
 import { DEFAULT_STATS, type BatchItem, type Stats } from '../lib/types';
 import ArticleCard from './ArticleCard';
 import FocusPermissionBanner from './FocusPermissionBanner';
@@ -236,7 +236,9 @@ export default function App() {
                 )}
               </div>
               <div className="row">
-                <span className="subtle">{getSelector(queue.config.strategy).label}</span>
+                <span className="subtle">
+                  {getSelector(effectiveStrategy(queue.config.strategy)).label}
+                </span>
                 <button
                   className="btn"
                   onClick={() => void handleDraw(true)}

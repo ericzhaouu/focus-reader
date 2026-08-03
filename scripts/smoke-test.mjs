@@ -528,6 +528,30 @@ test('归档产生的删除事件不会覆盖已读状态', async () => {
   assert.equal(state.readCount, 1);
 });
 
+test('AI 选文不出现在可选策略里，但契约仍然保留', async () => {
+  assert.equal(
+    lib.AVAILABLE_STRATEGIES.includes('ai'),
+    false,
+    'AI 尚未实现，不应出现在设置页下拉里',
+  );
+  assert.deepEqual(
+    [...lib.AVAILABLE_STRATEGIES],
+    ['random', 'oldest-first', 'domain-diversity', 'time-balanced'],
+  );
+  // The contract stays so v2 can switch it on without a schema change.
+  assert.equal(lib.SELECTORS.ai.available, false);
+  assert.equal(lib.effectiveStrategy('ai'), 'random', '存量配置应回落到随机');
+  assert.equal(lib.effectiveStrategy('oldest-first'), 'oldest-first');
+});
+
+test('配置成 AI 时仍能正常抽取（回落到随机）', async () => {
+  seedQueue(8);
+  await lib.patchConfig({ folderId: QUEUE, batchSize: 3, strategy: 'ai' });
+  const drawn = await lib.drawBatch();
+  assert.equal(drawn.ok, true);
+  assert.equal(drawn.batch.items.length, 3);
+});
+
 test('最早收藏优先策略确实先取最老的', async () => {
   const ids = seedQueue(8);
   await lib.patchConfig({ folderId: QUEUE, batchSize: 3, strategy: 'oldest-first' });

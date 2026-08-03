@@ -227,10 +227,18 @@ try {
   const optionsText = await browser.waitForText(optionsPage.sessionId, (t) =>
     t.includes('Focus Reader 设置'),
   );
+  const strategyOptions = await browser.evaluate(
+    `[...document.querySelectorAll('#strategy option')].map((o) => o.textContent.trim())`,
+    optionsPage.sessionId,
+  );
   check('设置页正常渲染并列出书签文件夹', () => {
     assert.match(optionsText, /待读文件夹/);
     assert.match(optionsText, /E2E 待读/);
     assert.match(optionsText, /专注阅读模式/);
+  });
+  check('选文下拉只列出已实现的策略', () => {
+    assert.deepEqual(strategyOptions, ['随机', '最早收藏优先', '来源多样', '时长均衡']);
+    assert.doesNotMatch(optionsText, /即将推出/);
   });
 
   browser.close();
