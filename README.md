@@ -80,6 +80,7 @@ npm run build          # 类型检查 + 构建到 dist/
 npm run dev            # 监听模式
 npm run try            # 一键试用：独立临时配置 + 预置示例文章
 npm run install:local  # 部署到固定位置，供日常使用
+npm run update         # 拉取最新代码并重新部署
 npm test               # 全部测试
 npm run zip            # 打包成可分发的 zip
 npm run release        # 构建 + 打包 + 发布 GitHub Release
@@ -119,8 +120,17 @@ npm run install:local
 > 更要紧的是：一旦目录被移动或删除，Chrome 会认为这是个全新扩展，
 > **阅读记录、统计、连续天数全部清零**。所以要装在一个不会动的地方。
 
-以后想升级，重新跑一次 `npm run install:local`，再到 `chrome://extensions`
-点该扩展的「重新加载」。路径不变，ID 就不变，数据都在。
+以后想升级：
+
+```bash
+npm run update
+```
+
+会拉取最新代码、装依赖、构建、部署到同一个位置，最后提示你去
+`chrome://extensions` 点该扩展的「**重新加载**」⟳（或者重启 Chrome）。
+
+**Chrome 不会自动更新非打包扩展**——它只是从磁盘读文件，不会主动去看有没有新版本。
+所以这一步必须手动触发。路径不变 → 扩展 ID 不变 → 阅读记录和统计全部保留。
 
 **副作用**：开发者模式下 Chrome 每次启动会弹一次「请停用开发者模式扩展程序」的提醒。
 点掉即可，不影响使用。
