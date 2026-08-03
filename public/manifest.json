@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Focus Reader Ã¢â‚¬â€ Ã¨Â¯Â»Ã¥Â®Å’Ã¥â€ ÂÃ¥Â­Ëœ",
-  "version": "0.1.2",
-  "description": "Ã¦Å Å Ã¦â€Â¶Ã¨â€”ÂÃ¥Â¤Â¹Ã¥ÂËœÃ¦Ë†ÂÃ¤Â¸â‚¬Ã¤Â»Â½Ã¦Å“â€°Ã©â„¢ÂÃ§Å¡â€žÃ£â‚¬ÂÃ©â€ÂÃ¥Â®Å¡Ã§Å¡â€žÃ©Ëœâ€¦Ã¨Â¯Â»Ã¦Â¸â€¦Ã¥Ââ€¢Ã¯Â¼Å¡Ã¤Â¸â‚¬Ã¦Â¬Â¡Ã¥ÂÂªÃ§Â»â„¢Ã¤Â½Â  N Ã§Â¯â€¡Ã¯Â¼Å’Ã¨Â¯Â»Ã¥Â®Å’Ã¦â€°ÂÃ¨Æ’Â½Ã¦Å Â½Ã¤Â¸â€¹Ã¤Â¸â‚¬Ã¦â€°Â¹Ã£â‚¬â€š",
+  "name": "Focus Reader — 读完再存",
+  "version": "0.1.3",
+  "description": "把收藏夹变成一份有限的、锁定的阅读清单：一次只给你 N 篇，读完才能抽下一批。",
   "minimum_chrome_version": "116",
   "permissions": ["bookmarks", "storage", "scripting"],
   "optional_host_permissions": ["<all_urls>"],
@@ -11,7 +11,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Ã¦â€°â€œÃ¥Â¼â‚¬Ã©Ëœâ€¦Ã¨Â¯Â»Ã¦Â¸â€¦Ã¥Ââ€¢",
+    "default_title": "打开阅读清单",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
