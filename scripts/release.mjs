@@ -92,7 +92,19 @@ async function api(token, url, options = {}) {
 }
 
 const manifest = JSON.parse(readFileSync(join(ROOT, 'dist', 'manifest.json'), 'utf8'));
+const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const version = manifest.version;
+
+// A build that failed leaves the previous dist/ in place, which would otherwise be
+// published under the wrong version. Refuse rather than ship a mislabelled artifact.
+if (version !== pkg.version) {
+  console.error(
+    `dist/ 与 package.json 版本不一致（dist ${version}，package ${pkg.version}）。\n` +
+      '通常意味着构建失败或未重新构建，请先运行 npm run build。',
+  );
+  process.exit(1);
+}
+
 const tag = `v${version}`;
 const asset = join(ROOT, 'release', `focus-reader-${tag}.zip`);
 
