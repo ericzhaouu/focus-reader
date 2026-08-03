@@ -16,6 +16,7 @@
     "e2e:focus": "node scripts/e2e-focus.mjs",
     "try": "node scripts/try-it.mjs",
     "install:local": "npm run build && node scripts/install-local.mjs",
+    "update": "node scripts/update.mjs",
     "test": "npm run smoke && npm run e2e && npm run e2e:focus",
     "zip": "node scripts/zip.mjs",
     "release": "npm run build && node scripts/zip.mjs && node scripts/release.mjs",
