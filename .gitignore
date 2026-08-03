@@ -6,3 +6,4 @@ release/
 *.pem
 .DS_Store
 .*.mjs
+*.local.md
