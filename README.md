@@ -83,6 +83,7 @@ npm run try            # 一键试用：独立临时配置 + 预置示例文章
 npm run install:local  # 部署到固定位置，供日常使用
 npm test               # 全部测试
 npm run zip            # 打包成商店可上传的 zip
+npm run release        # 构建 + 打包 + 发布 GitHub Release
 ```
 
 ### 一键试用
@@ -132,8 +133,9 @@ npm run install:local
 
 ### 方案 A — 发 zip，让对方手动加载
 
-把 `release/focus-reader-v0.1.0.zip` 发过去，对方解压到一个固定文件夹，
-然后同样走 `chrome://extensions` →「开发者模式」→「加载已解压的扩展程序」。
+直接把 [Releases 页面](https://github.com/ericzhaouu/focus-reader/releases/latest)
+的下载链接发给对方，让他解压到一个固定文件夹，
+然后走 `chrome://extensions` →「开发者模式」→「加载已解压的扩展程序」。
 
 - ✅ 零成本、零审核、立刻能用
 - ❌ 对方每次开 Chrome 都会看到开发者模式警告

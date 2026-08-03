@@ -17,6 +17,7 @@
     "install:local": "npm run build && node scripts/install-local.mjs",
     "test": "npm run smoke && npm run e2e && npm run e2e:focus",
     "zip": "node scripts/zip.mjs",
+    "release": "npm run build && node scripts/zip.mjs && node scripts/release.mjs",
     "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
