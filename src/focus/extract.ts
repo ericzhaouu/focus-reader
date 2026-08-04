@@ -116,27 +116,68 @@ function stripDuplicateHeading(root: DocumentFragment, title: string): void {
 }
 
 export function extractArticle(doc: Document): Extracted | null {
-  let parsed: ReturnType<Readability['parse']>;
-  try {
-    const clone = doc.cloneNode(true) as Document;
-    materialiseLazyImages(clone);
-    parsed = new Readability(clone, { charThreshold: 200 }).parse();
-  } catch {
-    return null;
-  }
-
-  if (!parsed?.content) return null;
+  const parsed = parseWithReadability(doc);
+  if (!parsed) return null;
 
   const text = parsed.textContent ?? '';
   const wordCount = wordCountOf(text);
   if (wordCount < MIN_WORD_COUNT) return null;
 
-  const clean = DOMPurify.sanitize(parsed.content, {
+  return finalise(doc, {
+    rawHtml: parsed.content,
+    title: parsed.title || doc.title || '',
+    byline: parsed.byline || null,
+    siteName: parsed.siteName || null,
+    wordCount,
+    text,
+  });
+}
+
+/**
+ * Builds an article from blocks harvested off a virtualised editor.
+ *
+ * Readability is skipped deliberately: its job is to guess which part of a page
+ * is the article, and here that is already known — the blocks came out of the
+ * document's own scroll container. Running it again would only risk discarding
+ * content that was expensive to recover.
+ */
+export function extractFromCollected(
+  doc: Document,
+  collected: { html: string; wordCount: number },
+  title: string,
+): Extracted | null {
+  if (collected.wordCount < MIN_WORD_COUNT) return null;
+
+  const container = doc.createElement('div');
+  container.innerHTML = collected.html;
+  const text = container.innerText ?? container.textContent ?? '';
+
+  return finalise(doc, {
+    rawHtml: collected.html,
+    title,
+    byline: null,
+    siteName: null,
+    wordCount: collected.wordCount,
+    text,
+  });
+}
+
+interface Finalisable {
+  rawHtml: string;
+  title: string;
+  byline: string | null;
+  siteName: string | null;
+  wordCount: number;
+  text: string;
+}
+
+function finalise(doc: Document, input: Finalisable): Extracted {
+  const clean = DOMPurify.sanitize(input.rawHtml, {
     FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed'],
     FORBID_ATTR: ['style', 'srcset', 'sizes'],
   });
 
-  const title = cleanTitle(parsed.title || doc.title || '', parsed.siteName || null, doc);
+  const title = cleanTitle(input.title, input.siteName, doc);
 
   // A <template> parses inertly, so images and media are not fetched just to run
   // this cleanup. The markup is already sanitised, so nothing can be reintroduced.
@@ -146,10 +187,28 @@ export function extractArticle(doc: Document): Extracted | null {
 
   return {
     title,
-    byline: parsed.byline || null,
-    siteName: parsed.siteName || null,
+    byline: input.byline,
+    siteName: input.siteName,
     contentHtml: template.innerHTML,
-    wordCount,
-    minutes: minutesFromText(text),
+    wordCount: input.wordCount,
+    minutes: minutesFromText(input.text),
   };
+}
+
+function parseWithReadability(doc: Document): { content: string; textContent: string | null; title: string; byline: string | null; siteName: string | null } | null {
+  try {
+    const clone = doc.cloneNode(true) as Document;
+    materialiseLazyImages(clone);
+    const parsed = new Readability(clone, { charThreshold: 200 }).parse();
+    if (!parsed?.content) return null;
+    return {
+      content: parsed.content,
+      textContent: parsed.textContent ?? null,
+      title: parsed.title ?? '',
+      byline: parsed.byline ?? null,
+      siteName: parsed.siteName ?? null,
+    };
+  } catch {
+    return null;
+  }
 }

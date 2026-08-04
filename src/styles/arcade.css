@@ -1,0 +1,297 @@
+/* ---------------------------------------------------------------------------
+   Arcade progress panel
+
+   A 90s cabinet screen embedded in the reading list: scanlines, phosphor glow,
+   and a segmented LED meter instead of a smooth bar. The book milestones become
+   stages, so finishing one is "clearing" it, and cleared books accumulate on a
+   shelf as pixel spines — the meter gives immediate feedback, the shelf gives
+   something that builds over months.
+
+   Colours are fixed rather than themed: an arcade screen reads as an arcade
+   screen precisely because it does not adapt to its surroundings.
+--------------------------------------------------------------------------- */
+
+.arcade {
+  --ac-bg: #0b0a1a;
+  --ac-panel: #14122b;
+  --ac-grid: rgba(120, 90, 255, 0.14);
+  --ac-cyan: #34e6f2;
+  --ac-magenta: #ff3ba7;
+  --ac-amber: #ffc63d;
+  --ac-green: #4dff9f;
+  --ac-dim: #6b6a9c;
+
+  position: relative;
+  margin-top: 28px;
+  padding: 20px 22px 18px;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 140% at 50% 0%, #1b1840 0%, var(--ac-bg) 62%);
+  border: 2px solid #2a2555;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 18px 40px rgba(10, 8, 30, 0.45);
+  overflow: hidden;
+  font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+  color: #e9e7ff;
+}
+
+/* CRT scanlines and a faint bloom, both purely decorative. */
+.arcade::before,
+.arcade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.arcade::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+.arcade::after {
+  background: radial-gradient(90% 70% at 50% 30%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.arcade > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- HUD ---------- */
+
+.arcade__hud {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.arcade__label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ac-dim);
+  margin-bottom: 5px;
+}
+
+.arcade__stage {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--ac-cyan);
+  text-shadow: 0 0 10px rgba(52, 230, 242, 0.55);
+  margin-bottom: 6px;
+}
+
+.arcade__title {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow:
+    0 0 14px rgba(255, 59, 167, 0.5),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.arcade__readout {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.arcade__score {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ac-amber);
+  text-shadow: 0 0 12px rgba(255, 198, 61, 0.5);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.arcade__combo {
+  margin-top: 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--ac-green);
+  text-shadow: 0 0 10px rgba(77, 255, 159, 0.45);
+}
+
+/* ---------- segmented meter ---------- */
+
+.arcade__meter {
+  display: flex;
+  gap: 3px;
+  height: 20px;
+  padding: 3px;
+  border: 1px solid #2f2a5e;
+  border-radius: 4px;
+  background: #080714;
+}
+
+.arcade__seg {
+  flex: 1;
+  border-radius: 1px;
+  background: var(--ac-grid);
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+
+.arcade__seg--on {
+  background: linear-gradient(to bottom, var(--ac-cyan), #1ba7d8);
+  box-shadow: 0 0 8px rgba(52, 230, 242, 0.75);
+}
+
+/* The leading segment pulses, the way a charging meter does. */
+.arcade__seg--tip {
+  background: linear-gradient(to bottom, #fff, var(--ac-cyan));
+  animation: arcade-pulse 900ms steps(2, end) infinite;
+}
+
+@keyframes arcade-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.arcade__meterFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--ac-dim);
+}
+
+.arcade__pct {
+  color: var(--ac-cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade__next {
+  color: #b9b6e8;
+}
+
+.arcade__next em {
+  font-style: normal;
+  color: var(--ac-magenta);
+  text-shadow: 0 0 8px rgba(255, 59, 167, 0.45);
+}
+
+/* ---------- cleared shelf ---------- */
+
+.arcade__shelf {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #2c2760;
+}
+
+.arcade__shelfHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.arcade__spines {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  min-height: 52px;
+}
+
+/* Each milestone is a book spine; cleared ones light up, the rest stay as slots. */
+.arcade__spine {
+  flex: 1;
+  min-width: 8px;
+  max-width: 26px;
+  border-radius: 2px 2px 0 0;
+  background: var(--spine, var(--ac-magenta));
+  box-shadow:
+    0 0 9px var(--spine, var(--ac-magenta)),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  cursor: default;
+  /* Grows out of the shelf rather than from its own centre. */
+  transform-origin: bottom center;
+  /*
+   * Deliberately no fill-mode. With `backwards` the spine holds the keyframe's
+   * scaled-down state for the whole delay, so an animation that never gets to
+   * run — a throttled background tab, a compositor that is not ticking — leaves
+   * the shelf permanently squashed and overflowing its container. Without a
+   * fill, the resting state is always the correct one.
+   */
+  animation: arcade-pop 320ms cubic-bezier(0.22, 1.4, 0.4, 1);
+}
+
+@keyframes arcade-pop {
+  from { transform: scaleY(0.35); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.arcade__spine--empty {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(120, 90, 255, 0.16) 0px,
+    rgba(120, 90, 255, 0.16) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+  border: 1px solid #2b2659;
+  box-shadow: none;
+  animation: none;
+}
+
+/* The stage in progress: outlined in the meter's colour so the eye finds it. */
+.arcade__spine--current {
+  border-color: var(--ac-cyan);
+  box-shadow:
+    0 0 10px rgba(52, 230, 242, 0.4),
+    inset 0 0 6px rgba(52, 230, 242, 0.25);
+}
+
+/* ---------- empty state ---------- */
+
+.arcade--idle .arcade__title {
+  color: var(--ac-dim);
+  text-shadow: none;
+}
+
+.arcade__coin {
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  color: var(--ac-amber);
+  text-shadow: 0 0 12px rgba(255, 198, 61, 0.6);
+  animation: arcade-blink 1200ms steps(2, end) infinite;
+}
+
+@keyframes arcade-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade__seg--tip,
+  .arcade__coin,
+  .arcade__spine {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .arcade__hud {
+    flex-direction: column;
+  }
+  .arcade__readout {
+    text-align: left;
+  }
+}

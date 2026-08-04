@@ -1,7 +1,13 @@
 import { sendMessage } from '../lib/messaging';
 import type { FocusPrefs, FocusTheme } from '../lib/types';
 import { domainOf } from '../lib/url';
-import { extractArticle, type Extracted } from './extract';
+import { extractArticle, extractFromCollected, type Extracted } from './extract';
+import {
+  collectVirtualisedDocument,
+  findEditorTitle,
+  findScrollContainer,
+  looksVirtualised,
+} from './virtualised';
 import css from './reader-view.css?inline';
 
 const ROOT_ID = '__focus_reader_root__';
@@ -245,6 +251,27 @@ function mount(article: Extracted, prefs: FocusPrefs, bookmarkId: string | null)
   lockPageScroll(true);
 }
 
+/**
+ * Produces the article, recovering virtualised editors first.
+ *
+ * A virtualised document only keeps its visible blocks in the DOM, so extracting
+ * straight away yields a fraction of it — and the result looks complete, which is
+ * the dangerous part. Walking the scroll container puts every block through the
+ * DOM once so the whole document can be captured.
+ */
+async function resolveArticle(): Promise<Extracted | null> {
+  const scroller = findScrollContainer(document);
+  if (scroller && looksVirtualised(scroller)) {
+    const collected = await collectVirtualisedDocument(scroller);
+    if (collected && collected.recovered) {
+      const title = findEditorTitle(document) ?? document.title;
+      const article = extractFromCollected(document, collected, title);
+      if (article) return article;
+    }
+  }
+  return extractArticle(document);
+}
+
 async function main(): Promise<void> {
   if (document.getElementById(ROOT_ID)) return;
 
@@ -256,7 +283,7 @@ async function main(): Promise<void> {
   }
   if (!context?.enabled) return;
 
-  const article = extractArticle(document);
+  const article = await resolveArticle();
   if (!article) return;
 
   // The measured length calibrates future time estimates and feeds the books milestone.

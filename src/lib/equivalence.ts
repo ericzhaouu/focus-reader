@@ -88,6 +88,22 @@ export function formatWords(words: number): string {
   return `${wan >= 100 ? Math.round(wan) : wan.toFixed(1)} 万字`;
 }
 
+/** Milestones already passed, oldest first — the shelf of cleared stages. */
+export function clearedMilestones(totalWords: number): Milestone[] {
+  const words = Math.max(0, Math.floor(totalWords));
+  return MILESTONES.filter((milestone) => words >= milestone.words);
+}
+
+/** 1-based index of the stage in progress, for the arcade HUD. */
+export function stageNumber(totalWords: number): number {
+  return clearedMilestones(totalWords).length + 1;
+}
+
+/** Zero-padded arcade score, e.g. `0118400`. */
+export function formatScore(words: number): string {
+  return String(Math.max(0, Math.floor(words))).padStart(7, '0');
+}
+
 /**
  * Fallback when an article was never opened in focus mode and so was never parsed.
  * Blends the CJK and Latin reading speeds used by `minutesFromText`.

@@ -155,10 +155,10 @@ try {
   await capture(reader.sessionId, '1-reading-list', '锁定的阅读清单');
 
   await browser.evaluate(
-    `document.querySelector('.equiv').scrollIntoView({ block: 'end' }); window.scrollBy(0, 90);`,
+    `document.querySelector('.arcade').scrollIntoView({ block: 'end' }); window.scrollBy(0, 60);`,
     reader.sessionId,
   );
-  await capture(reader.sessionId, '3-milestone', '阅读量换算成书籍等价');
+  await capture(reader.sessionId, '3-milestone', '街机风阅读进度');
 
   browser.close();
 } finally {

@@ -363,6 +363,24 @@ test('书籍等价换算的阶梯与进度', async () => {
   assert.equal(lib.formatWords(13_000), '1.3 万字');
 });
 
+test('街机 HUD 的关卡、分数与书架', async () => {
+  assert.equal(lib.formatScore(0), '0000000');
+  assert.equal(lib.formatScore(118_400), '0118400');
+
+  assert.equal(lib.stageNumber(0), 1, '一本未通关时仍处于第 1 关');
+  assert.equal(lib.clearedMilestones(0).length, 0);
+
+  // 118,400 字越过了《局外人》(11 万) 但没到《活着》(13 万)。
+  assert.equal(lib.stageNumber(118_400), 8);
+  const cleared = lib.clearedMilestones(118_400);
+  assert.equal(cleared.length, 7);
+  assert.equal(cleared.at(-1).title, '《局外人》');
+
+  // 书架槽位数必须与阶梯长度一致，否则 UI 会漏掉里程碑。
+  assert.equal(lib.MILESTONES.length, 17);
+  assert.equal(lib.clearedMilestones(99_999_999).length, lib.MILESTONES.length);
+});
+
 test('清空整批后解锁并可抽下一批', async () => {
   seedQueue(12);
   await lib.patchConfig({ folderId: QUEUE, batchSize: 10 });

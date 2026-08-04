@@ -200,11 +200,32 @@ try {
     assert.equal(abandoned.totalRead, 1);
   });
 
-  const equivText = await browser.evaluate('document.body.innerText', reader.sessionId);
-  check('阅读量被换算成书籍等价并展示出来', () => {
+  const arcade = await browser.evaluate(
+    `(() => {
+       const panel = document.querySelector('.arcade');
+       if (!panel) return null;
+       return {
+         stage: panel.querySelector('.arcade__stage')?.textContent ?? '',
+         score: panel.querySelector('.arcade__score')?.textContent ?? '',
+         slots: panel.querySelectorAll('.arcade__spine').length,
+         segments: panel.querySelectorAll('.arcade__seg').length,
+         lit: panel.querySelectorAll('.arcade__seg--on').length,
+         text: panel.innerText,
+       };
+     })()`,
+    reader.sessionId,
+  );
+  check('阅读进度以街机面板呈现', () => {
+    assert.ok(arcade, '应渲染 .arcade 面板');
+    assert.match(arcade.stage, /STAGE \d\d/);
+    assert.match(arcade.score, /^\d{7}$/, '分数应为 7 位补零');
+    assert.equal(arcade.slots, 17, '书架应列出全部里程碑槽位');
+    assert.equal(arcade.segments, 24, '能量槽应为分段式');
+  });
+  check('读完一篇后进度条开始填充', () => {
     assert.ok(abandoned.totalWords > 0, '读完一篇后应累计字数');
-    assert.match(equivText, /累计 .*字/);
-    assert.match(equivText, /就相当于读完/);
+    assert.ok(arcade.lit > 0, '能量槽应至少点亮一格');
+    assert.match(arcade.text, /解锁/);
   });
 
   // The lock is the product: the batch must stay pinned while items remain unread.
