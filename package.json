@@ -19,6 +19,7 @@
     "zip": "node scripts/zip.mjs",
     "release": "npm run build && node scripts/zip.mjs && node scripts/release.mjs",
     "screenshots": "node scripts/screenshots.mjs",
+    "promo-assets": "node scripts/promo-assets.mjs",
     "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {

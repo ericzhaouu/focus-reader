@@ -149,6 +149,14 @@ try {
   );
   await capture(reader.sessionId, '3-milestone', '街机风阅读进度');
 
+  const options = await openPage(`chrome-extension://${extensionId}/options.html`);
+  await require_(
+    options.sessionId,
+    `document.body.innerText.includes('Focus Reader 设置') && document.body.innerText.includes('当前：')`,
+    '设置页渲染',
+  );
+  await capture(options.sessionId, '2-settings', '待读文件夹与批次设置');
+
   browser.close();
 } finally {
   await chrome.dispose();
