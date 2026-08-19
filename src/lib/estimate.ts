@@ -3,10 +3,9 @@ import { rootDomainOf } from './url';
 const KEY_DOMAIN_SAMPLES = 'domainReadingSamples';
 
 /**
- * Reading-time estimates are unavoidably rough at draw time: a bookmark only
- * carries a title and a URL. We start from per-domain priors and then calibrate
- * them with the real word counts observed once an article is actually opened in
- * focus mode.
+ * Reading-time estimates are unavoidably rough: a bookmark only carries a title
+ * and a URL. Domain priors provide a useful ordering signal without reading or
+ * uploading page content.
  */
 const DOMAIN_PRIORS: Record<string, number> = {
   'arxiv.org': 30,
@@ -75,37 +74,4 @@ export function estimateMinutes(url: string, learned: LearnedPriors = {}): numbe
   }
   if (observed) return clampMinutes(observed.averageMinutes);
   return DEFAULT_MINUTES;
-}
-
-/**
- * Reading speed differs a lot between Latin text and CJK, so count them separately
- * instead of relying on whitespace-delimited words.
- */
-export function minutesFromText(text: string): number {
-  const cjk = (text.match(/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff]/g) ?? []).length;
-  const latinWords = (text.replace(/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff]/g, ' ').match(/\b[\w'-]+\b/g) ?? [])
-    .length;
-  return clampMinutes(cjk / 400 + latinWords / 240);
-}
-
-export function wordCountOf(text: string): number {
-  const cjk = (text.match(/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff]/g) ?? []).length;
-  const latinWords = (text.replace(/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff]/g, ' ').match(/\b[\w'-]+\b/g) ?? [])
-    .length;
-  return cjk + latinWords;
-}
-
-/** Feeds a real measurement back into the per-domain average (capped rolling mean). */
-export async function recordReadingSample(url: string, minutes: number): Promise<void> {
-  const domain = rootDomainOf(url);
-  if (!domain) return;
-  const learned = await loadLearnedPriors();
-  const previous = learned[domain];
-  const samples = Math.min((previous?.samples ?? 0) + 1, 20);
-  const previousAverage = previous?.averageMinutes ?? minutes;
-  const averageMinutes = previous
-    ? previousAverage + (minutes - previousAverage) / samples
-    : minutes;
-  learned[domain] = { samples, averageMinutes };
-  await chrome.storage.local.set({ [KEY_DOMAIN_SAMPLES]: learned });
 }

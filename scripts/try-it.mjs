@@ -59,10 +59,10 @@ const SAMPLES = [
   ['为什么我们收藏了却从不阅读', `${base}/a/why-we-save`],
   ['注意力是有预算的', `${base}/a/attention-budget`],
   ['论「读完」这件事', `${base}/a/finishing`],
-  ['一个几乎没有正文的页面（测降级）', `${base}/a/short`],
+  ['一个很短的测试页面', `${base}/a/short`],
   ['What Is ChatGPT Doing?', 'https://writings.stephenwolfram.com/2023/02/what-is-chatgpt-doing-and-why-does-it-work/'],
   ['Chrome 扩展 MV3 迁移指南', 'https://developer.chrome.com/docs/extensions/develop/migrate'],
-  ['Readability 是怎么工作的', 'https://github.com/mozilla/readability'],
+  ['Chrome Bookmarks API', 'https://developer.chrome.com/docs/extensions/reference/api/bookmarks'],
   ['深入理解 Shadow DOM', 'https://developer.mozilla.org/zh-CN/docs/Web/API/Web_components/Using_shadow_DOM'],
   ['CSS 容器查询', 'https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_containment/Container_queries'],
   ['SQLite 是如何测试的', 'https://www.sqlite.org/testing.html'],
@@ -84,7 +84,6 @@ const seeded = await browser.evaluate(
         batchSize: 5,
         strategy: 'random',
         archiveFolderName: '已读归档',
-        focusMode: true,
       },
     });
     return { folderId: folder.id, count: samples.length };
@@ -105,20 +104,18 @@ console.log(`
   试用环境已就绪（独立临时配置，不影响你日常的 Chrome）
 
   已预置「待读」文件夹，共 ${seeded.count} 篇文章
-  每批 5 篇 · 随机选文 · 专注模式已开启
+  每批 5 篇 · 随机选文 · 数据全部留在本地
 
   建议按这个顺序试：
 
   1. 点扩展工具栏图标（或已打开的标签）进入阅读清单
   2. 点「抽取 5 篇」 —— 看清单被锁定
-  3. 点「重选（剩 1 次）」 —— 再点一次，按钮已禁用
-  4. 打开一篇本地文章（${base}/a/...）
-     首次会弹窗申请网页读取权限，点「允许」后专注模式才生效
-  5. 在阅读视图里试：Aa 调字号/主题、「看原页」、Esc 退出
-  6. 点「标记已读」 —— 自动归档、关页、回到清单
-  7. 打开「一个几乎没有正文的页面」 —— 应保留原页不注入（降级）
-  8. 全部读完后 —— 解锁并可抽下一批
-  9. 打开 chrome://bookmarks 确认文章被移进「已读归档」而非删除
+  3. 点「重选（今日剩 1 次）」 —— 今天的整批重选额度被用掉
+  4. 点「打开」 —— 应直接打开原网页，不注入或改写正文
+  5. 点「已读」 —— 自动归档并刷新清单
+  6. 点一次「放弃」 —— 只进入确认态；再次点击才真正删除
+  7. 全部处理完后 —— 解锁并可抽下一批
+  8. 打开 chrome://bookmarks 确认已读文章进入「已读归档」
 
   直接关闭那个 Chrome 窗口即可结束，临时配置会自动清理。
 ──────────────────────────────────────────────────────────────

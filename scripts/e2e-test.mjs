@@ -8,9 +8,18 @@
  */
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Cdp, createReporter, findChrome, freePort, launchChrome, waitForEndpoint } from './cdp.mjs';
+import {
+  Cdp,
+  createReporter,
+  findChrome,
+  freePort,
+  launchChrome,
+  sleep,
+  waitForEndpoint,
+} from './cdp.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -25,6 +34,12 @@ if (!existsSync(join(DIST, 'manifest.json'))) {
 
 const reporter = createReporter();
 const { check } = reporter;
+const articleServer = createServer((_request, response) => {
+  response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  response.end('<!doctype html><html><body><h1>E2E 原网页</h1><p>由来源网站直接渲染。</p></body></html>');
+});
+await new Promise((resolve) => articleServer.listen(0, '127.0.0.1', resolve));
+const articlePort = articleServer.address().port;
 const PORT = await freePort();
 const chrome = launchChrome({ port: PORT });
 
@@ -48,6 +63,12 @@ try {
   const reader = await openPage('reader.html');
   const loadedOk = await browser.waitForText(reader.sessionId, (t) => t.includes('阅读清单'));
   check('阅读页成功加载（扩展页面与 React 均正常）', () => assert.match(loadedOk, /阅读清单/));
+  const manifest = await browser.evaluate('chrome.runtime.getManifest()', reader.sessionId);
+  check('扩展只申请 bookmarks 与 storage 权限', () => {
+    assert.deepEqual([...manifest.permissions].sort(), ['bookmarks', 'storage']);
+    assert.equal(manifest.host_permissions, undefined);
+    assert.equal(manifest.optional_host_permissions, undefined);
+  });
 
   // Seed real Chrome bookmarks from inside the extension page, which has full API access.
   const folderId = await browser.evaluate(
@@ -57,9 +78,9 @@ try {
       const folder = await chrome.bookmarks.create({ parentId: bar.id, title: 'E2E 待读' });
       for (let i = 1; i <= 12; i++) {
         await chrome.bookmarks.create({
-          parentId: folder.id,
-          title: 'E2E 文章 ' + i,
-          url: 'https://example' + (i % 3) + '.com/post-' + i,
+           parentId: folder.id,
+           title: 'E2E 文章 ' + i,
+           url: 'http://127.0.0.1:${articlePort}/post-' + i,
         });
       }
       await chrome.storage.local.set({
@@ -68,7 +89,6 @@ try {
           batchSize: 5,
           strategy: 'random',
           archiveFolderName: '已读归档',
-          focusMode: false,
         },
       });
       return folder.id;
@@ -111,6 +131,41 @@ try {
     reader.sessionId,
   );
   check('放弃按钮数量与未读文章数一致', () => assert.equal(abandonButtons, 5));
+
+  const sourceUrl = await browser.evaluate(
+    `(async () => {
+       const { currentBatch } = await chrome.storage.local.get('currentBatch');
+       return currentBatch.items[0].url;
+     })()`,
+    reader.sessionId,
+  );
+  await browser.evaluate(
+    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '打开').click()`,
+    reader.sessionId,
+  );
+  let sourceTarget = null;
+  for (let attempt = 0; attempt < 50 && !sourceTarget; attempt++) {
+    const { targetInfos } = await browser.send('Target.getTargets');
+    sourceTarget = targetInfos.find((target) => target.type === 'page' && target.url === sourceUrl);
+    if (!sourceTarget) await sleep(100);
+  }
+  check('打开文章会导航到书签原网址', () => assert.ok(sourceTarget));
+  if (sourceTarget) {
+    const { sessionId: sourceSession } = await browser.send(
+      'Target.attachToTarget',
+      { targetId: sourceTarget.targetId, flatten: true },
+    );
+    const sourceText = await browser.waitForText(sourceSession, (text) => text.includes('E2E 原网页'));
+    const injectionRoot = await browser.evaluate(
+      `!!document.getElementById('__focus_reader_root__')`,
+      sourceSession,
+    );
+    check('原网页由来源网站直接渲染且没有注入阅读视图', () => {
+      assert.match(sourceText, /由来源网站直接渲染/);
+      assert.equal(injectionRoot, false);
+    });
+    await browser.send('Target.closeTarget', { targetId: sourceTarget.targetId });
+  }
 
   await browser.evaluate(
     `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '已读').click()`,
@@ -255,7 +310,7 @@ try {
   check('设置页正常渲染并列出书签文件夹', () => {
     assert.match(optionsText, /待读文件夹/);
     assert.match(optionsText, /E2E 待读/);
-    assert.match(optionsText, /专注阅读模式/);
+    assert.doesNotMatch(optionsText, /专注阅读模式/);
   });
   check('选文下拉只列出已实现的策略', () => {
     assert.deepEqual(strategyOptions, ['随机', '最早收藏优先', '来源多样', '时长均衡']);
@@ -265,6 +320,7 @@ try {
   browser.close();
 } finally {
   await chrome.dispose();
+  await new Promise((resolve) => articleServer.close(resolve));
 }
 
 console.log(`\n${reporter.failures === 0 ? '阅读清单 e2e 全部通过' : `${reporter.failures} 项失败`}`);

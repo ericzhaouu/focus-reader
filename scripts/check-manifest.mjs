@@ -76,6 +76,17 @@ if (manifest) {
   if (!/[\u4e00-\u9fff]/.test(manifest.name ?? '')) {
     problems.push(`名称里的中文丢失了 — ${JSON.stringify(manifest.name)}`);
   }
+
+  const permissions = [...(manifest.permissions ?? [])].sort();
+  const expectedPermissions = ['bookmarks', 'storage'];
+  if (JSON.stringify(permissions) !== JSON.stringify(expectedPermissions)) {
+    problems.push(
+      `权限应只有 ${expectedPermissions.join(', ')}，实际为 ${permissions.join(', ') || '(none)'}。`,
+    );
+  }
+  if ((manifest.host_permissions ?? []).length || (manifest.optional_host_permissions ?? []).length) {
+    problems.push('当前产品不应声明任何 host permission。');
+  }
 }
 
 if (problems.length) {

@@ -418,9 +418,12 @@ async function recordRead(now: number, batchCompleted: boolean, item: BatchItem)
     streakDays = 1;
   }
 
-  // Focus mode reports the real length; otherwise fall back to the time estimate so
-  // the "books read" milestone still moves for people who read outside focus mode.
-  const words = item.words ?? wordsFromMinutes(item.estimatedMinutes);
+  // The source page does not expose a reliable word count, so convert the existing
+  // reading-time estimate into words to keep the arcade progress moving.
+  // Ignore `item.words` left by the archived reader-view version. Those values
+  // came from site-dependent extraction — the reason the feature was removed —
+  // so using them for new reads would keep the unreliable behavior alive.
+  const words = wordsFromMinutes(item.estimatedMinutes);
 
   const next: Stats = {
     ...stats,
@@ -432,19 +435,6 @@ async function recordRead(now: number, batchCompleted: boolean, item: BatchItem)
     batchesCompleted: stats.batchesCompleted + (batchCompleted ? 1 : 0),
   };
   await setStats(next);
-}
-
-/** Records the real article length measured by focus mode, for the books milestone. */
-export async function recordWordCount(bookmarkId: string, words: number): Promise<void> {
-  if (!Number.isFinite(words) || words <= 0) return;
-  const batch = await getCurrentBatch();
-  if (!batch) return;
-  const target = batch.items.find((item) => item.bookmarkId === bookmarkId);
-  if (!target || target.words === words) return;
-  const items = batch.items.map((item) =>
-    item.bookmarkId === bookmarkId ? { ...item, words } : item,
-  );
-  await setCurrentBatch({ ...batch, items });
 }
 
 /**

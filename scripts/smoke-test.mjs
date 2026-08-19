@@ -323,20 +323,39 @@ test('放弃后的文章不会再被抽中', async () => {
   }
 });
 
-test('阅读字数累加，未走专注模式时按时长折算', async () => {
+test('阅读字数按预估时长折算并累加', async () => {
   seedQueue(6);
   await lib.patchConfig({ folderId: QUEUE, batchSize: 3 });
   const drawn = await lib.drawBatch();
 
-  // One article parsed by focus mode, one that never was.
-  await lib.recordWordCount(drawn.batch.items[0].bookmarkId, 12_000);
   await lib.markRead(drawn.batch.items[0].bookmarkId);
   await lib.markRead(drawn.batch.items[1].bookmarkId);
 
   const stats = await lib.getStats();
-  const fallback = lib.wordsFromMinutes(drawn.batch.items[1].estimatedMinutes);
-  assert.equal(stats.totalWords, 12_000 + fallback);
-  assert.ok(fallback > 0, '没有真实字数时也应有折算值');
+  const expected = drawn.batch.items
+    .slice(0, 2)
+    .reduce((sum, item) => sum + lib.wordsFromMinutes(item.estimatedMinutes), 0);
+  assert.equal(stats.totalWords, expected);
+  assert.ok(expected > 0, '读完文章后街机分数应增加');
+});
+
+test('升级后忽略旧批次里由专注模式留下的 words', async () => {
+  seedQueue(4);
+  await lib.patchConfig({ folderId: QUEUE, batchSize: 2 });
+  const drawn = await lib.drawBatch();
+  const item = drawn.batch.items[0];
+
+  await lib.setCurrentBatch({
+    ...drawn.batch,
+    items: drawn.batch.items.map((entry) =>
+      entry.bookmarkId === item.bookmarkId ? { ...entry, words: 999_999 } : entry,
+    ),
+  });
+  await lib.markRead(item.bookmarkId);
+
+  const stats = await lib.getStats();
+  assert.equal(stats.totalWords, lib.wordsFromMinutes(item.estimatedMinutes));
+  assert.notEqual(stats.totalWords, 999_999, '不可靠的旧抓取字数不应继续进入统计');
 });
 
 test('书籍等价换算的阶梯与进度', async () => {
@@ -486,6 +505,25 @@ test('每批篇数上限为 10', async () => {
   await lib.patchConfig({ folderId: QUEUE, batchSize: 50 });
   const config = await lib.getConfig();
   assert.equal(config.batchSize, 10);
+});
+
+test('升级时旧 focusMode 配置会被丢弃', async () => {
+  seedQueue(3);
+  await chrome.storage.local.set({
+    config: {
+      folderId: QUEUE,
+      batchSize: 3,
+      strategy: 'random',
+      archiveFolderName: '已读归档',
+      focusMode: true,
+    },
+  });
+
+  const config = await lib.getConfig();
+  assert.equal('focusMode' in config, false);
+  await lib.patchConfig({ batchSize: 2 });
+  const stored = (await chrome.storage.local.get('config')).config;
+  assert.equal('focusMode' in stored, false, '下一次设置写入应清除旧字段');
 });
 
 test('来源多样策略会尽量避开同一来源', async () => {

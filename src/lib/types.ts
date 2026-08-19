@@ -24,8 +24,6 @@ export interface Config {
   strategy: SelectionStrategy;
   /** Name of the subfolder inside the queue folder that finished articles move into. */
   archiveFolderName: string;
-  /** Whether to inject the distraction-free reader view when opening an article. */
-  focusMode: boolean;
 }
 
 export interface Candidate {
@@ -48,7 +46,7 @@ export interface BatchItem extends Candidate {
    * recognise an already-archived article.
    */
   archivedId?: string;
-  /** Real word count once focus mode has parsed the article. */
+  /** Retained for batches created by the archived focus-mode version. */
   words?: number;
 }
 
@@ -77,17 +75,6 @@ export interface Stats {
   lastRerollDate: string | null;
 }
 
-export type FocusTheme = 'light' | 'dark' | 'sepia';
-
-export interface FocusPrefs {
-  fontSize: number;
-  lineHeight: number;
-  contentWidth: number;
-  theme: FocusTheme;
-  /** Domains where the user opted out of the reader view. */
-  disabledDomains: string[];
-}
-
 export interface FolderNode {
   id: string;
   title: string;
@@ -99,7 +86,6 @@ export const DEFAULT_CONFIG: Config = {
   batchSize: 10,
   strategy: 'random',
   archiveFolderName: '已读归档',
-  focusMode: true,
 };
 
 export const DEFAULT_STATS: Stats = {
@@ -113,10 +99,3 @@ export const DEFAULT_STATS: Stats = {
   lastRerollDate: null,
 };
 
-export const DEFAULT_FOCUS_PREFS: FocusPrefs = {
-  fontSize: 19,
-  lineHeight: 1.75,
-  contentWidth: 720,
-  theme: 'light',
-  disabledDomains: [],
-};

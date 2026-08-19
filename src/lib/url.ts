@@ -16,8 +16,3 @@ export function rootDomainOf(url: string): string {
   const lastTwo = parts.slice(-2).join('.');
   return twoLevelTlds.has(lastTwo) ? parts.slice(-3).join('.') : lastTwo;
 }
-
-export function isInjectableUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  return /^https?:\/\//i.test(url);
-}

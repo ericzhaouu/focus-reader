@@ -105,8 +105,8 @@ export function formatScore(words: number): string {
 }
 
 /**
- * Fallback when an article was never opened in focus mode and so was never parsed.
- * Blends the CJK and Latin reading speeds used by `minutesFromText`.
+ * Converts the source-page reading-time estimate into words for arcade progress.
+ * Blends the CJK and Latin reading speeds previously used by the parser.
  */
 export function wordsFromMinutes(minutes: number): number {
   return Math.max(0, Math.round(minutes * 320));

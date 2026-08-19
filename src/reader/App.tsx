@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { drawBatch, loadQueueState, type QueueState } from '../lib/batch';
 import { getFolderPath } from '../lib/bookmarks';
 import { onBatchUpdated, sendMessage } from '../lib/messaging';
-import { hasHostAccess, onHostAccessChanged } from '../lib/permissions';
 import { getStats } from '../lib/storage';
 import { getSelector, effectiveStrategy } from '../lib/selection';
 import { DEFAULT_STATS, type BatchItem, type Stats } from '../lib/types';
 import ArticleCard from './ArticleCard';
-import FocusPermissionBanner from './FocusPermissionBanner';
 import StatsPanel from './StatsPanel';
 
 function openOptions(): void {
@@ -18,7 +16,6 @@ export default function App() {
   const [queue, setQueue] = useState<QueueState | null>(null);
   const [stats, setStats] = useState<Stats>(DEFAULT_STATS);
   const [folderPath, setFolderPath] = useState<string | null>(null);
-  const [hostGranted, setHostGranted] = useState(true);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -30,14 +27,12 @@ export default function App() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const [nextQueue, nextStats, granted] = await Promise.all([
+    const [nextQueue, nextStats] = await Promise.all([
       loadQueueState(),
       getStats(),
-      hasHostAccess(),
     ]);
     setQueue(nextQueue);
     setStats(nextStats);
-    setHostGranted(granted);
     if (nextQueue.kind !== 'needs-setup' && nextQueue.config.folderId) {
       setFolderPath(await getFolderPath(nextQueue.config.folderId));
     } else {
@@ -50,7 +45,6 @@ export default function App() {
   }, [refresh]);
 
   useEffect(() => onBatchUpdated(() => void refresh()), [refresh]);
-  useEffect(() => onHostAccessChanged(setHostGranted), []);
 
   // Coming back from an article is the most common way state goes stale.
   useEffect(() => {
@@ -158,14 +152,9 @@ export default function App() {
     );
   }
 
-  const showPermissionBanner =
-    queue.kind !== 'needs-setup' && queue.config.focusMode && !hostGranted;
-
   return (
     <div className="page">
       {header}
-
-      {showPermissionBanner && <FocusPermissionBanner onGranted={() => setHostGranted(true)} />}
 
       {queue.kind === 'needs-setup' && (
         <div className="state">

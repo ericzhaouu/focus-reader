@@ -1,6 +1,6 @@
 /**
- * Sample articles served locally so focus mode can be exercised without depending
- * on the network, and without the extension ever touching a real bookmark folder.
+ * Sample articles served locally so queue behavior can be exercised without
+ * depending on the network or touching a real bookmark folder.
  */
 import { createServer } from 'node:http';
 
@@ -36,13 +36,13 @@ function page({ title, site, author, paragraphs, extras = '' }) {
       ${extras}
     </article>
     <aside>
-      <div class="ad">广告位 A<br />（专注模式应当移除此处）</div>
+      <div class="ad">广告位 A<br />（原网页内容保持不变）</div>
       <h3>热门推荐</h3>
       <ul><li>无关文章一</li><li>无关文章二</li><li>无关文章三</li></ul>
       <div class="ad">广告位 B</div>
     </aside>
   </div>
-  <footer>版权所有 © ${site} · 这段页脚在专注模式下也应当消失</footer>
+  <footer>版权所有 © ${site} · 由来源网站直接渲染</footer>
 </body>
 </html>`;
 }
@@ -96,7 +96,7 @@ archive(batch.read());  // 移动，不删除</code></pre>
     paragraphs: [P7, P1, P6, P3, P2, P4, P5],
   }),
   '/a/short': `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>一个视频页 - 短内容站</title></head>
-    <body><h1>这是一个几乎没有正文的页面</h1><p>用来验证专注模式的降级行为：正文太短时应保留原页，而不是渲染一个空白的阅读视图。</p></body></html>`,
+    <body><h1>这是一个几乎没有正文的页面</h1><p>用来验证打开文章时始终保留来源网站的原始页面。</p></body></html>`,
 };
 
 const INDEX = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>测试文章站</title>

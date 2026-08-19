@@ -1,19 +1,15 @@
 /**
  * Captures Chrome Web Store listing screenshots at the required 1280x800.
  *
- * Everything shown is the real extension: a real Chrome loads the real build,
- * reads real bookmarks, and the focus-mode shot renders the actual shipped
- * `focus-inject.js` against a real article page. Only the reading history is
- * pre-seeded, so the milestone panel shows a representative mid-journey state
- * rather than an empty one.
+ * A real Chrome loads the real build and real bookmarks. Only the reading history
+ * is pre-seeded so the arcade panel shows a representative mid-journey state.
  *
  * Run with: npm run screenshots
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Cdp, findChrome, freePort, launchChrome, sleep, waitForEndpoint } from './cdp.mjs';
-import { startArticleServer } from './sample-articles.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -31,11 +27,7 @@ if (!existsSync(join(DIST, 'manifest.json'))) {
   process.exit(1);
 }
 
-const injectSource = readFileSync(join(DIST, 'focus-inject.js'), 'utf8');
 mkdirSync(OUT, { recursive: true });
-
-const { port: articlePort } = await startArticleServer();
-const base = `http://127.0.0.1:${articlePort}`;
 
 const shots = [];
 
@@ -129,7 +121,7 @@ try {
       await chrome.storage.local.set({
         config: {
           folderId: folder.id, batchSize: 5, strategy: 'random',
-          archiveFolderName: '已读归档', focusMode: true,
+          archiveFolderName: '已读归档',
         },
         stats: {
           totalRead: 23, streakDays: 6, lastReadDate: new Date().toISOString().slice(0, 10),
@@ -149,9 +141,6 @@ try {
   );
   await require_(reader.sessionId, 'document.querySelectorAll(".card").length === 5', '批次渲染');
 
-  // The permission prompt is transient onboarding UI; the listing should show the
-  // steady state a user sees once focus mode is set up.
-  await browser.evaluate(`document.querySelector('.banner')?.remove()`, reader.sessionId);
   await capture(reader.sessionId, '1-reading-list', '锁定的阅读清单');
 
   await browser.evaluate(
@@ -163,75 +152,6 @@ try {
   browser.close();
 } finally {
   await chrome.dispose();
-}
-
-// ---- shot 2: focus reading mode -----------------------------------------
-// Deliberately a separate browser with no extension installed. In an instance
-// where an extension is loaded, Chrome keeps reclaiming the page's `chrome`
-// object, so the messaging stub the bundle needs cannot be kept in place — and
-// the bundle swallows that failure by design, leaving no reader view to shoot.
-// The rendering path exercised here is still entirely the shipped bundle.
-const focusPort = await freePort();
-const focusChrome = launchChrome({
-  port: focusPort,
-  extraArgs: [`--window-size=${WIDTH},${HEIGHT}`, '--hide-scrollbars'],
-});
-
-try {
-  const version = await waitForEndpoint(`http://127.0.0.1:${focusPort}/json/version`);
-  const browser = await Cdp.connect(version.webSocketDebuggerUrl);
-  const { require_, capture, openPage } = makeHelpers(browser);
-
-  const article = await openPage(`${base}/a/why-we-save`);
-  const stubbed = await browser.evaluate(
-    `(() => {
-       window.chrome = { runtime: { sendMessage: (m) => Promise.resolve(
-         m.type === 'GET_FOCUS_CONTEXT'
-           ? { bookmarkId: 'demo', url: location.href, enabled: true,
-               prefs: { fontSize: 19, lineHeight: 1.75, contentWidth: 720,
-                        theme: 'light', disabledDomains: [] } }
-           : { ok: true }) } };
-       return typeof window.chrome.runtime.sendMessage === 'function';
-     })()`,
-    article.sessionId,
-  );
-  if (stubbed !== true) throw new Error('无法为专注模式安装消息桩');
-
-  await browser.evaluate(injectSource, article.sessionId);
-  await require_(
-    article.sessionId,
-    `!!document.getElementById('__focus_reader_root__')?.shadowRoot?.querySelector('.wrap')`,
-    '专注阅读视图挂载',
-  );
-  // The view fades in over 180ms; capturing mid-animation lets the original page
-  // show through. Settle it deterministically rather than sleeping and hoping.
-  await browser.evaluate(
-    `(() => {
-       const shadow = document.getElementById('__focus_reader_root__').shadowRoot;
-       const style = document.createElement('style');
-       style.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; }';
-       shadow.appendChild(style);
-     })()`,
-    article.sessionId,
-  );
-  await require_(
-    article.sessionId,
-    `(() => {
-       const w = document.getElementById('__focus_reader_root__').shadowRoot.querySelector('.wrap');
-       const s = getComputedStyle(w);
-       const r = w.getBoundingClientRect();
-       // Opaque, fully faded in, and actually covering the viewport.
-       return s.opacity === '1'
-         && !/rgba\\(.*0\\)$/.test(s.backgroundColor)
-         && r.width >= ${WIDTH - 2} && r.height >= ${HEIGHT - 2};
-     })()`,
-    '阅读视图完全不透明并铺满视口',
-  );
-  await capture(article.sessionId, '2-focus-mode', '专注阅读模式');
-
-  browser.close();
-} finally {
-  await focusChrome.dispose();
 }
 
 console.log(`

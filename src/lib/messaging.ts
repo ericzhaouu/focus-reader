@@ -1,32 +1,12 @@
-import type { FocusPrefs } from './types';
-
-export interface FocusContext {
-  bookmarkId: string | null;
-  url: string;
-  prefs: FocusPrefs;
-  /** False when focus mode is off, the domain is opted out, or permission is missing. */
-  enabled: boolean;
-}
-
 export type Request =
   | { type: 'OPEN_ARTICLE'; bookmarkId: string; url: string }
   | { type: 'MARK_READ'; bookmarkId: string }
-  | { type: 'ABANDON'; bookmarkId: string }
-  | { type: 'GET_FOCUS_CONTEXT' }
-  | { type: 'CLOSE_AND_RETURN' }
-  | { type: 'DISABLE_FOCUS_FOR_DOMAIN'; domain: string }
-  | { type: 'SAVE_FOCUS_PREFS'; patch: Partial<FocusPrefs> }
-  | { type: 'RECORD_READING_SAMPLE'; url: string; minutes: number; words?: number };
+  | { type: 'ABANDON'; bookmarkId: string };
 
 export interface ResponseMap {
   OPEN_ARTICLE: { ok: boolean; tabId?: number; error?: string };
   MARK_READ: { ok: boolean; missing?: boolean; error?: string; complete?: boolean };
   ABANDON: { ok: boolean; error?: string; complete?: boolean };
-  GET_FOCUS_CONTEXT: FocusContext;
-  CLOSE_AND_RETURN: { ok: boolean };
-  DISABLE_FOCUS_FOR_DOMAIN: { ok: boolean };
-  SAVE_FOCUS_PREFS: { ok: boolean; prefs?: FocusPrefs };
-  RECORD_READING_SAMPLE: { ok: boolean };
 }
 
 export type RequestType = Request['type'];
@@ -43,7 +23,7 @@ export async function sendMessage<T extends Request>(message: T): Promise<Respon
 }
 
 export function broadcastBatchUpdated(): void {
-  // No receiver is a perfectly normal state (no reader tab open), so swallow the error.
+  // No receiver is a perfectly normal state (no reader tab open).
   chrome.runtime.sendMessage({ type: BATCH_UPDATED } satisfies BatchUpdatedEvent).catch(() => {});
 }
 
