@@ -7,6 +7,7 @@ import {
   type CurrentBatch,
   type Stats,
 } from './types';
+import { t } from './i18n';
 
 const KEY_CONFIG = 'config';
 const KEY_BATCH = 'currentBatch';
@@ -31,7 +32,7 @@ function normaliseConfig(raw: unknown): Config {
   const archiveFolderName =
     typeof record.archiveFolderName === 'string' && record.archiveFolderName.trim()
       ? record.archiveFolderName.trim()
-      : DEFAULT_CONFIG.archiveFolderName;
+      : t('archiveDefaultName');
 
   return {
     folderId: typeof record.folderId === 'string' && record.folderId ? record.folderId : null,

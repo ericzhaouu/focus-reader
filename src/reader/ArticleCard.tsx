@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import { t, uiLocale } from '../lib/i18n';
 import { domainOf } from '../lib/url';
 import type { BatchItem } from '../lib/types';
 
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
+const dateFormatter = new Intl.DateTimeFormat(uiLocale(), {
   year: 'numeric',
   month: 'numeric',
   day: 'numeric',
 });
 
 function formatAdded(addedAt: number): string {
-  if (!addedAt) return '收藏时间未知';
+  if (!addedAt) return t('articleAddedUnknown');
   const days = Math.floor((Date.now() - addedAt) / 86_400_000);
-  if (days <= 0) return '今天收藏';
-  if (days === 1) return '昨天收藏';
-  if (days < 30) return `${days} 天前收藏`;
-  if (days < 365) return `${Math.floor(days / 30)} 个月前收藏`;
-  return `收藏于 ${dateFormatter.format(new Date(addedAt))}`;
+  if (days <= 0) return t('articleAddedToday');
+  if (days === 1) return t('articleAddedYesterday');
+  if (days < 30) return t('articleAddedDays', [days]);
+  if (days < 365) return t('articleAddedMonths', [Math.floor(days / 30)]);
+  return t('articleAddedOn', [dateFormatter.format(new Date(addedAt))]);
 }
 
 const STATUS_GLYPH: Record<BatchItem['status'], string> = {
@@ -60,17 +61,23 @@ export default function ArticleCard({ item, index, busy, onOpen, onMarkRead, onA
       <div className="card__body">
         <h2 className="card__title">{item.title}</h2>
         <div className="card__meta">
-          <span>{domainOf(item.url) || '未知来源'}</span>
-          <span className="card__meta-dot">约 {item.estimatedMinutes} 分钟</span>
+          <span>{domainOf(item.url) || t('articleUnknownSource')}</span>
+          <span className="card__meta-dot">
+            {t('articleEstimatedMinutes', [item.estimatedMinutes])}
+          </span>
           <span className="card__meta-dot">{formatAdded(item.addedAt)}</span>
-          {item.status === 'invalid' && <span className="card__meta-dot">已不在待读文件夹中</span>}
-          {item.status === 'abandoned' && <span className="card__meta-dot">已放弃，收藏已删除</span>}
+          {item.status === 'invalid' && (
+            <span className="card__meta-dot">{t('articleInvalid')}</span>
+          )}
+          {item.status === 'abandoned' && (
+            <span className="card__meta-dot">{t('articleAbandoned')}</span>
+          )}
         </div>
       </div>
       <div className="card__actions">
         {item.status !== 'invalid' && item.status !== 'abandoned' && (
           <button className="btn" onClick={() => onOpen(item)} disabled={busy}>
-            {item.status === 'read' ? '再看一次' : '打开'}
+            {item.status === 'read' ? t('articleOpenAgain') : t('articleOpen')}
           </button>
         )}
         {isActionable && (
@@ -79,12 +86,12 @@ export default function ArticleCard({ item, index, busy, onOpen, onMarkRead, onA
               className={`btn btn--danger${confirming ? ' btn--danger-armed' : ''}`}
               onClick={handleAbandon}
               disabled={busy}
-              title="从收藏夹中彻底删除这篇文章，不可撤销"
+              title={t('articleAbandonTitle')}
             >
-              {confirming ? '确定放弃？' : '放弃'}
+              {confirming ? t('articleConfirmAbandon') : t('articleAbandon')}
             </button>
             <button className="btn btn--primary" onClick={() => onMarkRead(item)} disabled={busy}>
-              已读
+              {t('articleMarkRead')}
             </button>
           </>
         )}

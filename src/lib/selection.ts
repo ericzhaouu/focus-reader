@@ -1,4 +1,5 @@
 import { rootDomainOf } from './url';
+import { t, type MessageKey } from './i18n';
 import { SELECTION_STRATEGIES, type Candidate, type SelectionStrategy } from './types';
 
 export interface SelectionInput {
@@ -11,8 +12,8 @@ export interface SelectionInput {
 
 export interface Selector {
   id: SelectionStrategy;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
   /** False for strategies that exist as a contract only (see AiSelector). */
   available: boolean;
   select(input: SelectionInput): Candidate[];
@@ -39,8 +40,8 @@ function shuffle<T>(items: T[], random: () => number): T[] {
 
 const RandomSelector: Selector = {
   id: 'random',
-  label: '随机',
-  description: '完全随机抽取，最省心，也最容易撞见被遗忘的收藏。',
+  labelKey: 'strategyRandomLabel',
+  descriptionKey: 'strategyRandomDescription',
   available: true,
   select({ candidates, size, random = Math.random }) {
     return shuffle(candidates, random).slice(0, size);
@@ -49,8 +50,8 @@ const RandomSelector: Selector = {
 
 const OldestFirstSelector: Selector = {
   id: 'oldest-first',
-  label: '最早收藏优先',
-  description: '先清理沉在最底下的老收藏，专治「存了三年没看」。',
+  labelKey: 'strategyOldestLabel',
+  descriptionKey: 'strategyOldestDescription',
   available: true,
   select({ candidates, size }) {
     return candidates.slice().sort((a, b) => a.addedAt - b.addedAt).slice(0, size);
@@ -59,8 +60,8 @@ const OldestFirstSelector: Selector = {
 
 const DomainDiversitySelector: Selector = {
   id: 'domain-diversity',
-  label: '来源多样',
-  description: '按域名轮流抽取，避免一整批都来自同一个网站。',
+  labelKey: 'strategyDiversityLabel',
+  descriptionKey: 'strategyDiversityDescription',
   available: true,
   select({ candidates, size, random = Math.random }) {
     const buckets = new Map<string, Candidate[]>();
@@ -91,8 +92,8 @@ const DomainDiversitySelector: Selector = {
 
 const TimeBalancedSelector: Selector = {
   id: 'time-balanced',
-  label: '时长均衡',
-  description: '长短文章搭配，一批里既有能顺手读完的，也有值得坐下来啃的。',
+  labelKey: 'strategyBalancedLabel',
+  descriptionKey: 'strategyBalancedDescription',
   available: true,
   select({ candidates, size, estimate, random = Math.random }) {
     if (candidates.length <= size) return candidates.slice();
@@ -130,8 +131,8 @@ const TimeBalancedSelector: Selector = {
  */
 const AiSelector: Selector = {
   id: 'ai',
-  label: 'AI 选文',
-  description: '由 AI 根据你的兴趣与当下状态挑选（即将推出）。',
+  labelKey: 'strategyAiLabel',
+  descriptionKey: 'strategyAiDescription',
   available: false,
   select() {
     throw new StrategyUnavailableError('ai');
@@ -148,6 +149,14 @@ export const SELECTORS: Record<SelectionStrategy, Selector> = {
 
 export function getSelector(strategy: SelectionStrategy): Selector {
   return SELECTORS[strategy] ?? RandomSelector;
+}
+
+export function selectorLabel(strategy: SelectionStrategy): string {
+  return t(getSelector(strategy).labelKey);
+}
+
+export function selectorDescription(strategy: SelectionStrategy): string {
+  return t(getSelector(strategy).descriptionKey);
 }
 
 /**

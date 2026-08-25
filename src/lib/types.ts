@@ -85,7 +85,7 @@ export const DEFAULT_CONFIG: Config = {
   folderId: null,
   batchSize: 10,
   strategy: 'random',
-  archiveFolderName: '已读归档',
+  archiveFolderName: 'Read Archive',
 };
 
 export const DEFAULT_STATS: Stats = {

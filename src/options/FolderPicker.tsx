@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '../lib/i18n';
 import type { FolderNode } from '../lib/types';
 
 interface Props {
@@ -74,7 +75,7 @@ export default function FolderPicker({ nodes, selectedId, onSelect }: Props) {
   };
 
   if (nodes.length === 0) {
-    return <div className="folder-tree muted">还没有任何书签文件夹。</div>;
+    return <div className="folder-tree muted">{t('folderEmpty')}</div>;
   }
 
   return (

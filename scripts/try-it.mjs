@@ -34,7 +34,7 @@ const chrome = launchChrome({
   port: debugPort,
   // A real window, positioned and sized so it is comfortable to click through.
   headless: false,
-  extraArgs: ['--window-size=1280,900', '--window-position=80,40'],
+  extraArgs: ['--lang=zh-CN', '--window-size=1280,900', '--window-position=80,40'],
 });
 
 const version = await waitForEndpoint(`http://127.0.0.1:${debugPort}/json/version`);

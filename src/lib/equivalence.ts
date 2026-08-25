@@ -5,29 +5,51 @@
  * number is forgettable, "you have read a novel's worth" is not. Word counts are
  * approximate — the point is recognisability, not bibliographic precision.
  */
+import { t, uiLocale, type MessageKey } from './i18n';
+
 export interface Milestone {
-  title: string;
+  id: MilestoneId;
+  titleKey: MessageKey;
   words: number;
 }
 
+export type MilestoneId =
+  | 'long-report'
+  | 'metamorphosis'
+  | 'little-prince'
+  | 'old-man-sea'
+  | 'animal-farm'
+  | 'great-gatsby'
+  | 'stranger'
+  | 'to-live'
+  | 'pride-prejudice'
+  | 'fortress-besieged'
+  | 'hundred-years'
+  | 'three-body'
+  | 'sapiens'
+  | 'to-live-five'
+  | 'red-chamber'
+  | 'ordinary-world'
+  | 'war-peace';
+
 export const MILESTONES: readonly Milestone[] = [
-  { title: '一篇长报道', words: 8_000 },
-  { title: '《变形记》', words: 20_000 },
-  { title: '《小王子》', words: 27_000 },
-  { title: '《老人与海》', words: 50_000 },
-  { title: '《动物庄园》', words: 60_000 },
-  { title: '《了不起的盖茨比》', words: 90_000 },
-  { title: '《局外人》', words: 110_000 },
-  { title: '《活着》', words: 130_000 },
-  { title: '《傲慢与偏见》', words: 180_000 },
-  { title: '《围城》', words: 240_000 },
-  { title: '《百年孤独》', words: 270_000 },
-  { title: '《三体》', words: 300_000 },
-  { title: '《人类简史》', words: 380_000 },
-  { title: '《活着》× 5', words: 650_000 },
-  { title: '《红楼梦》', words: 730_000 },
-  { title: '《平凡的世界》', words: 1_040_000 },
-  { title: '《战争与和平》', words: 1_300_000 },
+  { id: 'long-report', titleKey: 'milestoneLongReport', words: 8_000 },
+  { id: 'metamorphosis', titleKey: 'milestoneMetamorphosis', words: 20_000 },
+  { id: 'little-prince', titleKey: 'milestoneLittlePrince', words: 27_000 },
+  { id: 'old-man-sea', titleKey: 'milestoneOldManSea', words: 50_000 },
+  { id: 'animal-farm', titleKey: 'milestoneAnimalFarm', words: 60_000 },
+  { id: 'great-gatsby', titleKey: 'milestoneGreatGatsby', words: 90_000 },
+  { id: 'stranger', titleKey: 'milestoneStranger', words: 110_000 },
+  { id: 'to-live', titleKey: 'milestoneToLive', words: 130_000 },
+  { id: 'pride-prejudice', titleKey: 'milestonePridePrejudice', words: 180_000 },
+  { id: 'fortress-besieged', titleKey: 'milestoneFortressBesieged', words: 240_000 },
+  { id: 'hundred-years', titleKey: 'milestoneHundredYears', words: 270_000 },
+  { id: 'three-body', titleKey: 'milestoneThreeBody', words: 300_000 },
+  { id: 'sapiens', titleKey: 'milestoneSapiens', words: 380_000 },
+  { id: 'to-live-five', titleKey: 'milestoneToLiveFive', words: 650_000 },
+  { id: 'red-chamber', titleKey: 'milestoneRedChamber', words: 730_000 },
+  { id: 'ordinary-world', titleKey: 'milestoneOrdinaryWorld', words: 1_040_000 },
+  { id: 'war-peace', titleKey: 'milestoneWarPeace', words: 1_300_000 },
 ] as const;
 
 export interface EquivalenceProgress {
@@ -83,9 +105,23 @@ export function equivalenceFor(totalWords: number): EquivalenceProgress {
 
 /** `13500` -> `1.4 万字`, `800` -> `800 字` */
 export function formatWords(words: number): string {
-  if (words < 10_000) return `${Math.round(words).toLocaleString('zh-CN')} 字`;
-  const wan = words / 10_000;
-  return `${wan >= 100 ? Math.round(wan) : wan.toFixed(1)} 万字`;
+  const locale = uiLocale();
+  const compact = (value: number): string =>
+    value >= 100 || Number.isInteger(value) ? String(Math.round(value)) : value.toFixed(1);
+  if (locale.toLowerCase().startsWith('zh')) {
+    if (words < 10_000) {
+      return t('wordsCount', [Math.round(words).toLocaleString(locale)]);
+    }
+    const wan = words / 10_000;
+    return t('wordsCountCompact', [compact(wan)]);
+  }
+  if (words < 1_000) return t('wordsCount', [Math.round(words).toLocaleString(locale)]);
+  const thousands = words / 1_000;
+  return t('wordsCountCompact', [compact(thousands)]);
+}
+
+export function milestoneTitle(milestone: Milestone): string {
+  return t(milestone.titleKey);
 }
 
 /** Milestones already passed, oldest first — the shelf of cleared stages. */

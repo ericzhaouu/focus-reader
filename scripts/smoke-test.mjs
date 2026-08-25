@@ -162,6 +162,21 @@ test('未配置文件夹时进入引导状态', async () => {
   assert.equal(state.kind, 'needs-setup');
 });
 
+test('非扩展环境使用英文 fallback 和动态占位符', async () => {
+  assert.equal(lib.t('extensionName'), 'Focus Reader');
+  assert.equal(
+    lib.t('readerReadyText', [12, 5]),
+    '12 articles are waiting. Drawing a batch will lock 5 until it is finished.',
+  );
+  assert.equal(lib.t('arcadeReadMoreUnlock', ['11.6k words', 'To Live']), 'Read 11.6k words more to unlock To Live');
+});
+
+test('新英文用户的默认归档文件夹名为 Read Archive', async () => {
+  seedQueue(1);
+  const config = await lib.getConfig();
+  assert.equal(config.archiveFolderName, 'Read Archive');
+});
+
 test('配置指向不存在的文件夹时提示重新配置', async () => {
   seedQueue(3);
   await lib.patchConfig({ folderId: 'does-not-exist' });
@@ -364,12 +379,12 @@ test('书籍等价换算的阶梯与进度', async () => {
   assert.equal(none.next.words, 8_000);
 
   const novel = lib.equivalenceFor(130_000);
-  assert.equal(novel.achieved.title, '《活着》');
+  assert.equal(novel.achieved.id, 'to-live');
   assert.ok(novel.next.words > 130_000);
 
   const between = lib.equivalenceFor(28_500);
-  assert.equal(between.achieved.title, '《小王子》');
-  assert.equal(between.next.title, '《老人与海》');
+  assert.equal(between.achieved.id, 'little-prince');
+  assert.equal(between.next.id, 'old-man-sea');
   assert.ok(between.ratio > 0 && between.ratio < 1);
   assert.equal(between.remaining, 50_000 - 28_500);
 
@@ -378,8 +393,8 @@ test('书籍等价换算的阶梯与进度', async () => {
   assert.equal(huge.loops, 2);
   assert.equal(huge.next, null);
 
-  assert.equal(lib.formatWords(800), '800 字');
-  assert.equal(lib.formatWords(13_000), '1.3 万字');
+  assert.equal(lib.formatWords(800), '800 words');
+  assert.equal(lib.formatWords(13_000), '13k words');
 });
 
 test('街机 HUD 的关卡、分数与书架', async () => {
@@ -393,7 +408,7 @@ test('街机 HUD 的关卡、分数与书架', async () => {
   assert.equal(lib.stageNumber(118_400), 8);
   const cleared = lib.clearedMilestones(118_400);
   assert.equal(cleared.length, 7);
-  assert.equal(cleared.at(-1).title, '《局外人》');
+  assert.equal(cleared.at(-1).id, 'stranger');
 
   // 书架槽位数必须与阶梯长度一致，否则 UI 会漏掉里程碑。
   assert.equal(lib.MILESTONES.length, 17);

@@ -1,4 +1,5 @@
 import type { Candidate, FolderNode } from './types';
+import { t } from './i18n';
 
 type Node = chrome.bookmarks.BookmarkTreeNode;
 
@@ -9,7 +10,7 @@ function isFolder(node: Node): boolean {
 function toFolderNode(node: Node): FolderNode {
   return {
     id: node.id,
-    title: node.title || '(未命名文件夹)',
+    title: node.title || t('folderUnnamed'),
     children: (node.children ?? []).filter(isFolder).map(toFolderNode),
   };
 }
@@ -42,7 +43,7 @@ export async function getFolderPath(id: string): Promise<string | null> {
   if (!cursor) return null;
   while (cursor) {
     if (cursor.parentId === undefined) break; // root node, not worth showing
-    parts.unshift(cursor.title || '(未命名)');
+    parts.unshift(cursor.title || t('folderUnnamed'));
     cursor = cursor.parentId ? await getNode(cursor.parentId) : null;
   }
   return parts.join(' / ');

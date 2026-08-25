@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Focus Reader — 读完再存",
-  "version": "0.3.0",
-  "description": "把收藏夹变成一份有限的、锁定的阅读清单：一次只给你 N 篇，读完才能抽下一批。",
+  "name": "__MSG_extensionName__",
+  "version": "0.4.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "minimum_chrome_version": "116",
   "permissions": ["bookmarks", "storage"],
   "background": {
@@ -10,7 +11,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "打开阅读清单",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

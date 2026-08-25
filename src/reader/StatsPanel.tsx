@@ -4,8 +4,10 @@ import {
   equivalenceFor,
   formatScore,
   formatWords,
+  milestoneTitle,
   stageNumber,
 } from '../lib/equivalence';
+import { t } from '../lib/i18n';
 import type { Stats } from '../lib/types';
 
 const SEGMENTS = 24;
@@ -59,7 +61,7 @@ function Shelf({ totalWords }: { totalWords: number }) {
         const height = 15 + Math.round((i / last) * 34);
         return (
           <div
-            key={milestone.title}
+            key={milestone.id}
             className={
               'arcade__spine' +
               (cleared ? '' : ' arcade__spine--empty') +
@@ -74,7 +76,11 @@ function Shelf({ totalWords }: { totalWords: number }) {
                   }
                 : {}),
             }}
-            title={`${milestone.title} · ${formatWords(milestone.words)}${cleared ? ' · 已通关' : ''}`}
+            title={t('arcadeBookTooltip', [
+              milestoneTitle(milestone),
+              formatWords(milestone.words),
+              cleared ? t('arcadeBookClearedSuffix') : '',
+            ])}
           />
         );
       })}
@@ -94,18 +100,28 @@ export default function StatsPanel({ stats }: { stats: Stats }) {
   const started = stats.totalWords > 0;
 
   const stageLabel = progress.loops > 0
-    ? `LOOP ${progress.loops + 1} · STAGE ${String(stageNumber(stats.totalWords)).padStart(2, '0')}`
-    : `STAGE ${String(stageNumber(stats.totalWords)).padStart(2, '0')}`;
+    ? t('arcadeLoopStage', [
+        progress.loops + 1,
+        String(stageNumber(stats.totalWords)).padStart(2, '0'),
+      ])
+    : t('arcadeStage', [String(stageNumber(stats.totalWords)).padStart(2, '0')]);
 
   const heading = progress.achieved
     ? progress.loops > 0
-      ? `已通关 ${progress.loops} 遍《战争与和平》`
-      : `已通关${progress.achieved.title}`
-    : '尚未通关第一本';
+      ? t('arcadeClearedLoops', [progress.loops])
+      : t('arcadeClearedBook', [milestoneTitle(progress.achieved)])
+    : t('arcadeNoBook');
 
   const nextLine = progress.next
-    ? <>再读 {formatWords(progress.remaining)} 解锁 <em>{progress.next.title}</em></>
-    : <>再读 {formatWords(progress.remaining)} 进入下一轮</>;
+    ? (
+        <>
+          {t('arcadeReadMoreUnlock', [
+            formatWords(progress.remaining),
+            milestoneTitle(progress.next),
+          ])}
+        </>
+      )
+    : <>{t('arcadeReadMoreLoop', [formatWords(progress.remaining)])}</>;
 
   return (
     <>
@@ -116,7 +132,7 @@ export default function StatsPanel({ stats }: { stats: Stats }) {
             <div className="arcade__title">{heading}</div>
           </div>
           <div className="arcade__readout">
-            <div className="arcade__label">score</div>
+            <div className="arcade__label">{t('arcadeScore')}</div>
             <div className="arcade__score">{formatScore(stats.totalWords)}</div>
             {stats.streakDays > 0 && (
               <div className="arcade__combo">COMBO ×{stats.streakDays}</div>
@@ -128,13 +144,13 @@ export default function StatsPanel({ stats }: { stats: Stats }) {
         <div className="arcade__meterFoot">
           <span className="arcade__pct">{Math.round(progress.ratio * 100)}%</span>
           <span className="arcade__next">
-            {started ? nextLine : <span className="arcade__coin">▶ 读完第一篇即可启动</span>}
+            {started ? nextLine : <span className="arcade__coin">{t('arcadeStart')}</span>}
           </span>
         </div>
 
         <div className="arcade__shelf">
           <div className="arcade__shelfHead">
-            <span className="arcade__label">cleared</span>
+            <span className="arcade__label">{t('arcadeCleared')}</span>
             <span className="arcade__label">
               {clearedMilestones(stats.totalWords).length} / {MILESTONES.length}
             </span>
@@ -146,19 +162,19 @@ export default function StatsPanel({ stats }: { stats: Stats }) {
       <div className="stats">
         <div className="stat">
           <div className="stat__value">{stats.totalRead}</div>
-          <div className="stat__label">累计读完</div>
+          <div className="stat__label">{t('statTotalRead')}</div>
         </div>
         <div className="stat">
           <div className="stat__value">{stats.streakDays}</div>
-          <div className="stat__label">连续阅读天数</div>
+          <div className="stat__label">{t('statStreak')}</div>
         </div>
         <div className="stat">
           <div className="stat__value">{stats.batchesCompleted}</div>
-          <div className="stat__label">完成批次</div>
+          <div className="stat__label">{t('statBatches')}</div>
         </div>
         <div className="stat">
           <div className="stat__value">{stats.totalAbandoned}</div>
-          <div className="stat__label">主动放弃</div>
+          <div className="stat__label">{t('statAbandoned')}</div>
         </div>
       </div>
     </>

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { drawBatch, loadQueueState, type QueueState } from '../lib/batch';
 import { getFolderPath } from '../lib/bookmarks';
+import { t } from '../lib/i18n';
 import { onBatchUpdated, sendMessage } from '../lib/messaging';
 import { getStats } from '../lib/storage';
-import { getSelector, effectiveStrategy } from '../lib/selection';
+import { effectiveStrategy, selectorLabel } from '../lib/selection';
 import { DEFAULT_STATS, type BatchItem, type Stats } from '../lib/types';
 import ArticleCard from './ArticleCard';
 import StatsPanel from './StatsPanel';
@@ -67,13 +68,13 @@ export default function App() {
       try {
         const result = await sendMessage({ type: 'MARK_READ', bookmarkId: item.bookmarkId });
         if (!result.ok) {
-          showToast(`标记失败：${result.error ?? '未知错误'}`);
+          showToast(t('toastMarkFailed', [result.error ?? t('commonUnknownError')]));
         } else if (result.missing) {
-          showToast('这条书签已不在收藏夹里，已从清单中清除');
+          showToast(t('toastBookmarkMissing'));
         } else if (result.complete) {
-          showToast('这一批读完了 🎉');
+          showToast(t('toastBatchRead'));
         } else {
-          showToast('已归档，收藏时间更新为今天');
+          showToast(t('toastArchived'));
         }
       } finally {
         setBusy(false);
@@ -88,9 +89,13 @@ export default function App() {
       setBusy(true);
       try {
         const result = await sendMessage({ type: 'ABANDON', bookmarkId: item.bookmarkId });
-        if (!result.ok) showToast(`放弃失败：${result.error ?? '未知错误'}`);
-        else if (result.complete) showToast('这一批处理完了');
-        else showToast('已放弃，这条收藏已删除');
+        if (!result.ok) {
+          showToast(t('toastAbandonFailed', [result.error ?? t('commonUnknownError')]));
+        } else if (result.complete) {
+          showToast(t('toastBatchProcessed'));
+        } else {
+          showToast(t('toastAbandoned'));
+        }
       } finally {
         setBusy(false);
         await refresh();
@@ -106,16 +111,16 @@ export default function App() {
         const result = await drawBatch({ reroll });
         if (!result.ok) {
           const messages: Record<string, string> = {
-            locked: '当前这批还没处理完，先把它清空吧',
-            'reroll-used': '今天的重选机会已经用掉了，明天再来',
-            'already-started': '这批已经开始读了，不能再整批重选——单篇可以「放弃」',
-            'not-configured': '还没选择待读文件夹',
-            empty: '待读文件夹里没有可读的文章',
-            conflict: '状态刚被另一个标签页改动，已刷新',
+            locked: t('toastLocked'),
+            'reroll-used': t('toastRerollUsed'),
+            'already-started': t('toastRerollStarted'),
+            'not-configured': t('toastNotConfigured'),
+            empty: t('toastFolderEmpty'),
+            conflict: t('toastConflict'),
           };
-          showToast(messages[result.reason ?? ''] ?? '抽取失败');
+          showToast(messages[result.reason ?? ''] ?? t('toastDrawFailed'));
         } else if (reroll) {
-          showToast('已重新抽取，今天的重选用完了');
+          showToast(t('toastRerolled'));
         }
       } finally {
         setBusy(false);
@@ -128,14 +133,14 @@ export default function App() {
   const header = (
     <header className="header">
       <div>
-        <h1>阅读清单</h1>
+        <h1>{t('readerPageTitle')}</h1>
         <div className="header__meta">
-          {folderPath ? `来自 ${folderPath}` : '把收藏夹变成一份读得完的清单'}
+          {folderPath ? t('readerFromFolder', [folderPath]) : t('readerTagline')}
         </div>
       </div>
       <div className="header__actions">
         <button className="btn btn--ghost" onClick={openOptions}>
-          设置
+          {t('commonSettings')}
         </button>
       </div>
     </header>
@@ -146,7 +151,7 @@ export default function App() {
       <div className="page">
         {header}
         <div className="state">
-          <div className="state__text">正在读取你的收藏夹…</div>
+          <div className="state__text">{t('readerLoading')}</div>
         </div>
       </div>
     );
@@ -159,12 +164,10 @@ export default function App() {
       {queue.kind === 'needs-setup' && (
         <div className="state">
           <div className="state__glyph">📚</div>
-          <div className="state__title">先选一个待读文件夹</div>
-          <p className="state__text">
-            指定收藏夹里存放待读文章的那个文件夹，之后每次打开这里，都只会看到从中抽出的一小批。
-          </p>
+          <div className="state__title">{t('readerSetupTitle')}</div>
+          <p className="state__text">{t('readerSetupText')}</p>
           <button className="btn btn--primary btn--lg" onClick={openOptions}>
-            去设置
+            {t('readerGoToSettings')}
           </button>
         </div>
       )}
@@ -172,10 +175,10 @@ export default function App() {
       {queue.kind === 'folder-missing' && (
         <div className="state">
           <div className="state__glyph">🔍</div>
-          <div className="state__title">找不到待读文件夹了</div>
-          <p className="state__text">这个文件夹可能已被删除或重命名，重新指定一个就好。</p>
+          <div className="state__title">{t('readerFolderMissingTitle')}</div>
+          <p className="state__text">{t('readerFolderMissingText')}</p>
           <button className="btn btn--primary btn--lg" onClick={openOptions}>
-            重新选择
+            {t('readerChooseAgain')}
           </button>
         </div>
       )}
@@ -183,12 +186,10 @@ export default function App() {
       {queue.kind === 'empty-folder' && (
         <div className="state">
           <div className="state__glyph">🌱</div>
-          <div className="state__title">待读文件夹是空的</div>
-          <p className="state__text">
-            去收藏几篇想读的文章吧。收藏行为完全不受限制——受限的只是你一次能看到多少。
-          </p>
+          <div className="state__title">{t('readerFolderEmptyTitle')}</div>
+          <p className="state__text">{t('readerFolderEmptyText')}</p>
           <button className="btn" onClick={openOptions}>
-            换一个文件夹
+            {t('readerChangeFolder')}
           </button>
         </div>
       )}
@@ -196,17 +197,16 @@ export default function App() {
       {queue.kind === 'no-batch' && (
         <div className="state">
           <div className="state__glyph">🎯</div>
-          <div className="state__title">准备好开始了</div>
+          <div className="state__title">{t('readerReadyTitle')}</div>
           <p className="state__text">
-            待读文件夹里有 {queue.availableCount} 篇文章。抽取后会锁定 {queue.config.batchSize}{' '}
-            篇，读完才能抽下一批。
+            {t('readerReadyText', [queue.availableCount, queue.config.batchSize])}
           </p>
           <button
             className="btn btn--primary btn--lg"
             onClick={() => void handleDraw(false)}
             disabled={busy}
           >
-            抽取 {Math.min(queue.config.batchSize, queue.availableCount)} 篇
+            {t('readerDrawCount', [Math.min(queue.config.batchSize, queue.availableCount)])}
           </button>
         </div>
       )}
@@ -216,17 +216,23 @@ export default function App() {
           <div className="progress">
             <div className="progress__top">
               <div className="progress__count">
-                <em>{queue.readCount}</em>/ {queue.batch.items.length} 已读
+                <em>{t('readerReadProgress', [queue.readCount, queue.batch.items.length])}</em>
                 {queue.abandonedCount > 0 && (
-                  <span className="subtle">　{queue.abandonedCount} 篇已放弃</span>
+                  <span className="subtle">
+                    {' · '}
+                    {t('readerAbandonedCount', [queue.abandonedCount])}
+                  </span>
                 )}
                 {queue.invalidCount > 0 && (
-                  <span className="subtle">　{queue.invalidCount} 篇已失效</span>
+                  <span className="subtle">
+                    {' · '}
+                    {t('readerInvalidCount', [queue.invalidCount])}
+                  </span>
                 )}
               </div>
               <div className="row">
                 <span className="subtle">
-                  {getSelector(effectiveStrategy(queue.config.strategy)).label}
+                  {selectorLabel(effectiveStrategy(queue.config.strategy))}
                 </span>
                 <button
                   className="btn"
@@ -234,17 +240,17 @@ export default function App() {
                   disabled={busy || !queue.canReroll}
                   title={
                     queue.canReroll
-                      ? '每天可以整批重选一次'
+                      ? t('readerRerollAvailableTitle')
                       : queue.rerollBlockedBy === 'already-started'
-                        ? '这批已经开始处理了，不能再整批重选——单篇可以「放弃」'
-                        : '今天的重选机会已用完，明天恢复'
+                        ? t('readerRerollStartedTitle')
+                        : t('readerRerollUsedTitle')
                   }
                 >
                   {queue.canReroll
-                    ? '重选（今日剩 1 次）'
+                    ? t('readerRerollAvailable')
                     : queue.rerollBlockedBy === 'already-started'
-                      ? '已开始，不可重选'
-                      : '今日重选已用完'}
+                      ? t('readerRerollStarted')
+                      : t('readerRerollUsed')}
                 </button>
               </div>
             </div>
@@ -267,18 +273,18 @@ export default function App() {
           {queue.complete && (
             <div className="state" style={{ marginBottom: 20 }}>
               <div className="state__glyph">🎉</div>
-              <div className="state__title">这一批处理完了</div>
+              <div className="state__title">{t('readerCompleteTitle')}</div>
               <p className="state__text">
                 {queue.availableCount > 0
-                  ? `待读文件夹里还有 ${queue.availableCount} 篇。要继续吗？`
-                  : '待读文件夹已经清空了。去收藏一些新的吧。'}
+                  ? t('readerCompleteMore', [queue.availableCount])
+                  : t('readerCompleteEmpty')}
               </p>
               <button
                 className="btn btn--primary btn--lg"
                 onClick={() => void handleDraw(false)}
                 disabled={busy || queue.availableCount === 0}
               >
-                抽取下一批
+                {t('readerDrawNext')}
               </button>
             </div>
           )}
@@ -299,7 +305,7 @@ export default function App() {
 
           {!queue.complete && (
             <p className="subtle" style={{ marginTop: 16, textAlign: 'center' }}>
-              还剩 {queue.unreadCount} 篇。这批处理完之前，这里不会出现新文章——你的收藏夹不受任何影响。
+              {t('readerRemaining', [queue.unreadCount])}
             </p>
           )}
 

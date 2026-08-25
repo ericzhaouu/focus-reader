@@ -1,7 +1,7 @@
 {
   "name": "focus-reader",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "A Chrome extension that turns a bookmark folder into a locked, finite reading queue.",
   "scripts": {
@@ -12,10 +12,11 @@
     "dev": "node scripts/dev.mjs",
     "smoke": "node scripts/smoke-test.mjs",
     "e2e": "node scripts/e2e-test.mjs",
+    "e2e:i18n": "node scripts/e2e-i18n.mjs",
     "try": "node scripts/try-it.mjs",
     "install:local": "npm run build && node scripts/install-local.mjs",
     "update": "node scripts/update.mjs",
-    "test": "npm run smoke && npm run e2e",
+    "test": "npm run smoke && npm run e2e && npm run e2e:i18n",
     "zip": "node scripts/zip.mjs",
     "release": "npm run build && node scripts/zip.mjs && node scripts/release.mjs",
     "screenshots": "node scripts/screenshots.mjs",

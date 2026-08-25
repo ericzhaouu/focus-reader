@@ -4,5 +4,6 @@ export * from '../src/lib/batch';
 export * from '../src/lib/bookmarks';
 export * from '../src/lib/equivalence';
 export * from '../src/lib/estimate';
+export * from '../src/lib/i18n';
 export * from '../src/lib/selection';
 export * from '../src/lib/storage';

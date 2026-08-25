@@ -41,7 +41,7 @@ const articleServer = createServer((_request, response) => {
 await new Promise((resolve) => articleServer.listen(0, '127.0.0.1', resolve));
 const articlePort = articleServer.address().port;
 const PORT = await freePort();
-const chrome = launchChrome({ port: PORT });
+const chrome = launchChrome({ port: PORT, extraArgs: ['--lang=en-US'] });
 
 try {
   const version = await waitForEndpoint(`http://127.0.0.1:${PORT}/json/version`);
@@ -61,8 +61,26 @@ try {
   };
 
   const reader = await openPage('reader.html');
-  const loadedOk = await browser.waitForText(reader.sessionId, (t) => t.includes('阅读清单'));
-  check('阅读页成功加载（扩展页面与 React 均正常）', () => assert.match(loadedOk, /阅读清单/));
+  const loadedOk = await browser.waitForText(reader.sessionId, (t) => t.includes('Reading Queue'));
+  check('阅读页成功加载（扩展页面与 React 均正常）', () =>
+    assert.match(loadedOk, /Reading Queue/),
+  );
+  const localeInfo = await browser.evaluate(
+    `({
+       locale: chrome.i18n.getUILanguage(),
+       name: chrome.i18n.getMessage('extensionName'),
+       dynamic: chrome.i18n.getMessage('readerReadyText', ['12', '5'])
+     })`,
+    reader.sessionId,
+  );
+  check('默认英文词库和动态占位符正常', () => {
+    assert.match(localeInfo.locale, /^en/i);
+    assert.equal(localeInfo.name, 'Focus Reader');
+    assert.equal(
+      localeInfo.dynamic,
+      '12 articles are waiting. Drawing a batch will lock 5 until it is finished.',
+    );
+  });
   const manifest = await browser.evaluate('chrome.runtime.getManifest()', reader.sessionId);
   check('扩展只申请 bookmarks 与 storage 权限', () => {
     assert.deepEqual([...manifest.permissions].sort(), ['bookmarks', 'storage']);
@@ -75,11 +93,11 @@ try {
     `(async () => {
       const [root] = await chrome.bookmarks.getTree();
       const bar = root.children.find((n) => !n.url);
-      const folder = await chrome.bookmarks.create({ parentId: bar.id, title: 'E2E 待读' });
+      const folder = await chrome.bookmarks.create({ parentId: bar.id, title: 'E2E Reading' });
       for (let i = 1; i <= 12; i++) {
         await chrome.bookmarks.create({
            parentId: folder.id,
-           title: 'E2E 文章 ' + i,
+           title: 'E2E Article ' + i,
            url: 'http://127.0.0.1:${articlePort}/post-' + i,
         });
       }
@@ -88,7 +106,7 @@ try {
           folderId: folder.id,
           batchSize: 5,
           strategy: 'random',
-          archiveFolderName: '已读归档',
+          archiveFolderName: 'Read Archive',
         },
       });
       return folder.id;
@@ -99,35 +117,35 @@ try {
 
   await browser.send('Page.reload', {}, reader.sessionId);
 
-  const ready = await browser.waitForText(reader.sessionId, (t) => t.includes('准备好开始了'));
+  const ready = await browser.waitForText(reader.sessionId, (t) => t.includes('Ready to begin'));
   check('识别出待读文件夹并显示可抽取数量', () => {
-    assert.match(ready, /准备好开始了/);
-    assert.match(ready, /12 篇文章/);
-    assert.match(ready, /抽取 5 篇/);
+    assert.match(ready, /Ready to begin/);
+    assert.match(ready, /12 articles are waiting/);
+    assert.match(ready, /Draw 5/);
   });
 
   await browser.evaluate(
-    `[...document.querySelectorAll('button')].find((b) => b.textContent.includes('抽取')).click()`,
+    `[...document.querySelectorAll('button')].find((b) => b.textContent.includes('Draw')).click()`,
     reader.sessionId,
   );
 
-  const drawn = await browser.waitForText(reader.sessionId, (t) => t.includes('E2E 文章'));
+  const drawn = await browser.waitForText(reader.sessionId, (t) => t.includes('E2E Article'));
   const cardCount = await browser.evaluate(
     'document.querySelectorAll(".card").length',
     reader.sessionId,
   );
   check('抽取后渲染出锁定的 5 篇清单', () => {
     assert.equal(cardCount, 5);
-    assert.match(drawn, /0\s*\/\s*5 已读/);
-    assert.match(drawn, /还剩 5 篇/);
+    assert.match(drawn, /0\s*\/\s*5 read/);
+    assert.match(drawn, /5 left/);
   });
-  check('页面上不存在任何「新增文章」入口', () => assert.doesNotMatch(drawn, /新增|添加文章/));
-  check('重选按钮显示每日额度', () => assert.match(drawn, /重选（今日剩 1 次）/));
+  check('页面上不存在任何「新增文章」入口', () => assert.doesNotMatch(drawn, /Add article/));
+  check('重选按钮显示每日额度', () => assert.match(drawn, /Reroll \(1 left today\)/));
   check('每张卡片都提供「放弃」出口', () => {
     assert.equal(cardCount, 5);
   });
   const abandonButtons = await browser.evaluate(
-    `[...document.querySelectorAll('.card button')].filter((b) => b.textContent === '放弃').length`,
+    `[...document.querySelectorAll('.card button')].filter((b) => b.textContent === 'Abandon').length`,
     reader.sessionId,
   );
   check('放弃按钮数量与未读文章数一致', () => assert.equal(abandonButtons, 5));
@@ -140,7 +158,7 @@ try {
     reader.sessionId,
   );
   await browser.evaluate(
-    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '打开').click()`,
+    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === 'Open').click()`,
     reader.sessionId,
   );
   let sourceTarget = null;
@@ -168,22 +186,22 @@ try {
   }
 
   await browser.evaluate(
-    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '已读').click()`,
+    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === 'Read').click()`,
     reader.sessionId,
   );
 
-  const afterRead = await browser.waitForText(reader.sessionId, (t) => /1\s*\/\s*5 已读/.test(t));
+  const afterRead = await browser.waitForText(reader.sessionId, (t) => /1\s*\/\s*5 read/.test(t));
   check('标记已读后进度推进，且不能再整批重选', () => {
-    assert.match(afterRead, /1\s*\/\s*5 已读/);
-    assert.match(afterRead, /已开始，不可重选/);
-    assert.match(afterRead, /还剩 4 篇/);
+    assert.match(afterRead, /1\s*\/\s*5 read/);
+    assert.match(afterRead, /Started · reroll locked/);
+    assert.match(afterRead, /4 left/);
   });
 
   const archived = await browser.evaluate(
     `(async () => {
       const { config } = await chrome.storage.local.get('config');
       const children = await chrome.bookmarks.getChildren(config.folderId);
-      const archive = children.find((n) => !n.url && n.title === '已读归档');
+      const archive = children.find((n) => !n.url && n.title === 'Read Archive');
       if (!archive) return { archiveExists: false };
       const inside = await chrome.bookmarks.getChildren(archive.id);
       return {
@@ -204,12 +222,12 @@ try {
 
   // Abandoning deletes the bookmark, so it deliberately takes two clicks.
   await browser.evaluate(
-    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '放弃').click()`,
+    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === 'Abandon').click()`,
     reader.sessionId,
   );
   const armed = await browser.waitFor(
     reader.sessionId,
-    `[...document.querySelectorAll('.card button')].some((b) => b.textContent === '确定放弃？')`,
+    `[...document.querySelectorAll('.card button')].some((b) => b.textContent === 'Confirm abandon?')`,
     (v) => v === true,
     5000,
   );
@@ -226,16 +244,16 @@ try {
   });
 
   await browser.evaluate(
-    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === '确定放弃？').click()`,
+    `[...document.querySelectorAll('.card button')].find((b) => b.textContent === 'Confirm abandon?').click()`,
     reader.sessionId,
   );
-  await browser.waitForText(reader.sessionId, (t) => t.includes('已放弃'));
+  await browser.waitForText(reader.sessionId, (t) => t.includes('Abandoned'));
 
   const abandoned = await browser.evaluate(
     `(async () => {
       const { config, currentBatch, stats } = await chrome.storage.local.get(['config','currentBatch','stats']);
       const children = await chrome.bookmarks.getChildren(config.folderId);
-      const archive = children.find((n) => !n.url && n.title === '已读归档');
+      const archive = children.find((n) => !n.url && n.title === 'Read Archive');
       return {
         pending: children.filter(n => n.url).length,
         archived: archive ? (await chrome.bookmarks.getChildren(archive.id)).length : 0,
@@ -280,7 +298,7 @@ try {
   check('读完一篇后进度条开始填充', () => {
     assert.ok(abandoned.totalWords > 0, '读完一篇后应累计字数');
     assert.ok(arcade.lit > 0, '能量槽应至少点亮一格');
-    assert.match(arcade.text, /解锁/);
+    assert.match(arcade.text, /unlock/);
   });
 
   // The lock is the product: the batch must stay pinned while items remain unread.
@@ -301,20 +319,20 @@ try {
 
   const optionsPage = await openPage('options.html');
   const optionsText = await browser.waitForText(optionsPage.sessionId, (t) =>
-    t.includes('Focus Reader 设置'),
+    t.includes('Focus Reader Settings'),
   );
   const strategyOptions = await browser.evaluate(
     `[...document.querySelectorAll('#strategy option')].map((o) => o.textContent.trim())`,
     optionsPage.sessionId,
   );
   check('设置页正常渲染并列出书签文件夹', () => {
-    assert.match(optionsText, /待读文件夹/);
-    assert.match(optionsText, /E2E 待读/);
-    assert.doesNotMatch(optionsText, /专注阅读模式/);
+    assert.match(optionsText, /Reading folder/);
+    assert.match(optionsText, /E2E Reading/);
+    assert.doesNotMatch(optionsText, /Focus mode/);
   });
   check('选文下拉只列出已实现的策略', () => {
-    assert.deepEqual(strategyOptions, ['随机', '最早收藏优先', '来源多样', '时长均衡']);
-    assert.doesNotMatch(optionsText, /即将推出/);
+    assert.deepEqual(strategyOptions, ['Random', 'Oldest first', 'Source diversity', 'Balanced length']);
+    assert.doesNotMatch(optionsText, /Coming soon/);
   });
 
   browser.close();

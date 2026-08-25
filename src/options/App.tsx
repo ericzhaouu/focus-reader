@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { countCandidates, getFolderPath, getFolderTree } from '../lib/bookmarks';
-import { AVAILABLE_STRATEGIES, SELECTORS, effectiveStrategy } from '../lib/selection';
+import { t } from '../lib/i18n';
+import {
+  AVAILABLE_STRATEGIES,
+  effectiveStrategy,
+  selectorDescription,
+  selectorLabel,
+} from '../lib/selection';
 import { getConfig, patchConfig } from '../lib/storage';
 import {
   MAX_BATCH_SIZE,
@@ -55,7 +61,7 @@ export default function App() {
     async (patch: Partial<Config>) => {
       const next = await patchConfig(patch);
       setConfig(next);
-      showToast('已保存');
+      showToast(t('commonSaved'));
       if ('folderId' in patch) await refreshFolderInfo(next.folderId);
       return next;
     },
@@ -65,8 +71,8 @@ export default function App() {
   if (!config) {
     return (
       <div className="page page--narrow">
-        <h1>设置</h1>
-        <p className="muted">加载中…</p>
+        <h1>{t('commonSettings')}</h1>
+        <p className="muted">{t('commonLoading')}</p>
       </div>
     );
   }
@@ -75,16 +81,16 @@ export default function App() {
     <div className="page page--narrow">
       <header className="header">
         <div>
-          <h1>Focus Reader 设置</h1>
-          <div className="header__meta">读完一批，才有下一批。</div>
+          <h1>{t('optionsPageTitle')}</h1>
+          <div className="header__meta">{t('optionsTagline')}</div>
         </div>
       </header>
 
       <section className="section">
         <div className="section__head">
-          <h2>待读文件夹</h2>
+          <h2>{t('optionsQueueFolderTitle')}</h2>
           <div className="section__desc">
-            插件只从这个文件夹的直接子书签中抽取文章，子文件夹里的内容不会被打扰。
+            {t('optionsQueueFolderDescription')}
           </div>
         </div>
         <FolderPicker
@@ -94,23 +100,23 @@ export default function App() {
         />
         {folderPath && (
           <div className="field__hint">
-            当前：{folderPath}
-            {candidateCount !== null && ` — ${candidateCount} 篇待读`}
+            {t('optionsCurrentFolder', [folderPath])}
+            {candidateCount !== null && ` — ${t('optionsUnreadCount', [candidateCount])}`}
           </div>
         )}
       </section>
 
       <section className="section">
         <div className="section__head">
-          <h2>批次</h2>
+          <h2>{t('optionsBatchTitle')}</h2>
           <div className="section__desc">
-            每批的篇数与选文方式。修改篇数会在下一批生效，不会打断当前锁定的批次。
+            {t('optionsBatchDescription')}
           </div>
         </div>
 
         <div className="field">
           <label className="field__label" htmlFor="batch-size">
-            每批篇数
+            {t('optionsBatchSize')}
           </label>
           <select
             id="batch-size"
@@ -121,17 +127,17 @@ export default function App() {
             {Array.from({ length: MAX_BATCH_SIZE - MIN_BATCH_SIZE + 1 }, (_, i) => i + MIN_BATCH_SIZE).map(
               (size) => (
                 <option key={size} value={size}>
-                  {size} 篇
+                  {t('optionsArticleCount', [size])}
                 </option>
               ),
             )}
           </select>
-          <div className="field__hint">上限 10 篇——超过这个数，清单就又变成收藏夹了。</div>
+          <div className="field__hint">{t('optionsBatchLimitHint')}</div>
         </div>
 
         <div className="field">
           <label className="field__label" htmlFor="strategy">
-            选文方式
+            {t('optionsSelectionMethod')}
           </label>
           <select
             id="strategy"
@@ -143,18 +149,18 @@ export default function App() {
           >
             {AVAILABLE_STRATEGIES.map((strategy) => (
               <option key={strategy} value={strategy}>
-                {SELECTORS[strategy].label}
+                {selectorLabel(strategy)}
               </option>
             ))}
           </select>
           <div className="field__hint">
-            {SELECTORS[effectiveStrategy(config.strategy)].description}
+            {selectorDescription(effectiveStrategy(config.strategy))}
           </div>
         </div>
 
         <div className="field">
           <label className="field__label" htmlFor="archive">
-            已读归档文件夹名
+            {t('optionsArchiveName')}
           </label>
           <input
             id="archive"
@@ -171,7 +177,7 @@ export default function App() {
             }}
           />
           <div className="field__hint">
-            读完的文章会<strong>移动</strong>到待读文件夹下的这个子文件夹，永远不会被删除。
+            {t('optionsArchiveHint')}
           </div>
         </div>
       </section>

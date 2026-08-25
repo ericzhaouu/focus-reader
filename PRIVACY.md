@@ -2,6 +2,10 @@
 
 **Focus Reader — 读完再存**
 
+[English](#english) · [简体中文](#简体中文)
+
+## 简体中文
+
 最后更新：2026-08
 
 ## 简短版
@@ -66,3 +70,77 @@ Chrome 只负责在新标签页导航到书签原网址；扩展无法读取页�
 ## 联系
 
 有疑问请通过 Chrome 应用商店的支持页面反馈。
+
+---
+
+## English
+
+**Last updated: August 2026**
+
+### Short version
+
+Focus Reader has no server. Your data never leaves your device.
+
+### Data handled locally
+
+The extension processes the following data only inside Chrome:
+
+| Data | Purpose |
+|---|---|
+| Settings | Reading folder ID, batch size, selection method, archive folder name |
+| Current batch | Bookmark titles, URLs, and read/abandoned state |
+| Statistics | Articles read, streak, completed batches, abandoned count, estimated words |
+
+This data is stored in `chrome.storage.local` and is removed when the extension
+is uninstalled.
+
+The extension has:
+
+- no account or sign-in;
+- no backend server;
+- no advertising, analytics, tracking, or telemetry;
+- no third-party SDK;
+- no background API requests;
+- no access to page content.
+
+When you click **Open**, Chrome navigates normally to the bookmark's original URL.
+That request goes to the source website, not to the developer.
+
+### Permissions
+
+| Permission | Purpose |
+|---|---|
+| `bookmarks` | Show bookmark folders, draw articles from the selected folder, archive read bookmarks, and delete bookmarks only after an explicit two-step Abandon confirmation |
+| `storage` | Store settings, the locked batch, reroll state, and reading progress locally |
+
+The extension does not request `tabs`, `scripting`, host permissions, or optional
+host permissions. It cannot read the contents of websites you open.
+
+### Bookmark changes
+
+Focus Reader changes bookmarks only after an explicit action:
+
+1. **Read** — creates a copy in the archive subfolder first, then removes the
+   original so the archived bookmark receives the completion date. If removing the
+   original fails, the safe copy remains.
+2. **Abandon** — permanently deletes the bookmark only after the user clicks the
+   confirmation button a second time. Confirmation expires after four seconds.
+
+The settings page reads the bookmark folder hierarchy so you can select a reading
+folder. Drawing, archiving, and abandoning apply only to the folder you selected.
+
+### Collection, transmission, and sharing
+
+Focus Reader does not transmit, sell, share, or disclose bookmark data, queue
+state, or reading activity to the developer or any third party.
+
+### Changes
+
+Material changes to this policy will be reflected in the extension's release
+notes and this document.
+
+### Contact
+
+Use the Chrome Web Store support page or the GitHub issue tracker:
+
+https://github.com/ericzhaouu/focus-reader/issues
